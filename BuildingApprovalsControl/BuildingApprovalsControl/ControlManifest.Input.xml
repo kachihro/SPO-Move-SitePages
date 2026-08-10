@@ -23,10 +23,17 @@
       through the Dataverse client (context.webAPI / portal REST fallback), not this bound field.
     -->
     <property name="boundField" display-name-key="Bound Field" description-key="Unused anchor field the control is attached to" of-type="SingleLine.Text" usage="bound" required="true" />
+    <!--
+      Fluent pinned to 9.46.2: the npm-installed 9.68.0 was rejected on import ("not supported by the
+      platform") by this org. 9.46.2 is the version Microsoft's docs cite as platform-supported
+      alongside React 16.14.0 — bundling Fluent ourselves instead (dropping this platform-library
+      entry) works but blows past PCF's 5MB bundle-size limit via @fluentui/react-icons, so rely on the
+      platform-provided copy instead.
+    -->
     <resources>
       <code path="index.ts" order="1"/>
       <platform-library name="React" version="16.14.0" />
-      <platform-library name="Fluent" version="9.68.0" />
+      <platform-library name="Fluent" version="9.46.2" />
     </resources>
     <feature-usage>
       <uses-feature name="WebAPI" required="true" />

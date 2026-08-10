@@ -33,8 +33,16 @@ interactive `pac auth create` login and has not been done as part of this scaffo
 ```powershell
 pac auth create --environment <dev-environment-url>
 cd BuildingApprovalsControl
-pac pcf push --publisher-prefix cr137 --solution-unique-name BuildingApprovalsSolution
+pac pcf push --publisher-prefix cr137
 ```
 
-Not run as part of this scaffold — requires an interactive login against the real Adelaide Airport
-Dataverse environment.
+`--solution-unique-name BuildingApprovalsSolution` only works once that solution has actually been
+imported into the target environment (this repo's `solutions/BuildingApprovalsSolution` is just the local
+source project — `pac solution init` doesn't create anything in Dataverse by itself). Until that solution
+is imported, use `--publisher-prefix cr137` — `pac pcf push` creates/updates a temporary
+`PowerAppsToolsTemp_cr137` solution wrapper for fast dev iteration instead.
+
+Pushed successfully to `poc-cli` (`orga3a7d35b.crm6.dynamics.com`) as a verification spike. Note: Fluent UI
+is declared as a `platform-library` in `ControlManifest.Input.xml` pinned to **9.46.2** — the
+npm-installed 9.68.0 was rejected on import ("not supported by the platform") by that environment; see
+`docs/open-questions.md` item 3 if a different target environment rejects 9.46.2 too.

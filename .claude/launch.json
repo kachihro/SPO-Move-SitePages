@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pcf-test-harness",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "BuildingApprovalsControl", "run", "start"],
+      "port": 8181
+    }
+  ]
+}

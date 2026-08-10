@@ -11,8 +11,14 @@ building further — do not guess at real values in code.
 2. **Anti-forgery token retrieval mechanism** for the live site, if the REST fallback is needed.
    `PortalRestClient.getToken()` currently assumes `window.shell.getTokenDeferred()` — confirm this is
    still how the deployed portal exposes it, or find the actual mechanism (meta tag / hidden field).
-3. ~~Bundled React version~~ — **resolved**: React 16.14.0, Fluent UI 9.68.0, both loaded as PCF
-   `platform-library` resources (not bundled), per the scaffolded `ControlManifest.Input.xml`.
+3. ~~Bundled React/Fluent version~~ — **resolved**: React 16.14.0 as a PCF `platform-library`. Fluent
+   UI is also a `platform-library`, but the npm-installed 9.68.0 was **rejected on import** by the
+   `poc-cli` environment (`orga3a7d35b.crm6.dynamics.com`) with "platform library fluent_9_68_0 with
+   version 9.68.0 is not supported by the platform." Pinned to **9.46.2** instead (the version
+   Microsoft's docs cite as platform-supported alongside React 16.14.0), which imported successfully.
+   Bundling Fluent ourselves (dropping the platform-library entry) also works but blows past PCF's 5MB
+   bundle-size limit (~6.2MB) via `@fluentui/react-icons` — not worth pursuing given the platform-library
+   pin works. If a different target environment also rejects 9.46.2, this needs re-checking per org.
 4. **Real Dataverse table logical name.** Prefix `cr137` and the `cr137_applicationstatus` column are
    confirmed from the design doc; the table name and every other field's logical name in
    `types/BuildingApproval.ts` / `services/WebApiClient.ts` / `services/PortalRestClient.ts` are
