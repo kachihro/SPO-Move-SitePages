@@ -1,20 +1,12 @@
 import * as React from "react";
 import { Card, CardHeader, Checkbox, Field, Input, Option, Dropdown, Textarea } from "@fluentui/react-components";
-import { BuildingApprovalFormData, ChecklistTrade } from "../../../types/BuildingApproval";
+import { BuildingApprovalFormData, ChecklistTrade, FEE_AMOUNT_TYPE_OPTIONS } from "../../../types/BuildingApproval";
 import { StepProps } from "./StepApplicantAndActivity";
 
-// TODO: only "Electrical" is confirmed from the design doc screenshot — the full list of trades with
-// conditional checklist panels is unconfirmed (docs/open-questions.md item 5). Add the real trades here
-// once confirmed against the live multistep form.
+// TODO: only "Electrical" is confirmed from the design doc screenshot — the real table has ~100
+// trade-specific checklist columns (water, excavation, cranes, antennas, security, customs, traffic
+// management, landscaping, etc., see docs/open-questions.md item 5) that this step doesn't cover yet.
 const KNOWN_TRADES = ["Electrical"];
-
-const feeOptions = [
-  "$350 (Value under $10000)",
-  "$500 (Value between $10,000 and $50,000)",
-  "$700 (Value between $50,000 and $100,000)",
-  "$1000 + 0.15% (Value of the balance in excess of $100,000)",
-  "AAL project",
-];
 
 export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, readOnly }) => {
   const update = (mutate: (data: BuildingApprovalFormData) => void) => {
@@ -41,19 +33,21 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
         <CardHeader header={<b>Application Fee</b>} />
         <Field label="Estimated Value of Building Activity">
           <Input
-            value={formData.estimatedValueOfBuildingActivity ?? ""}
+            value={formData.estimatedValueOfBuildingActivity?.toString() ?? ""}
             disabled={readOnly}
-            onChange={(_, d) => update((f) => (f.estimatedValueOfBuildingActivity = d.value))}
+            onChange={(_, d) => update((f) => (f.estimatedValueOfBuildingActivity = d.value === "" ? undefined : Number(d.value)))}
           />
         </Field>
         <Field label="Fee Amount Type">
           <Dropdown
-            value={formData.feeAmountType ?? ""}
+            value={FEE_AMOUNT_TYPE_OPTIONS.find((o) => o.value === formData.feeAmountType)?.label ?? ""}
             disabled={readOnly}
-            onOptionSelect={(_, d) => update((f) => (f.feeAmountType = d.optionText ?? ""))}
+            onOptionSelect={(_, d) => update((f) => (f.feeAmountType = d.optionValue !== undefined ? Number(d.optionValue) : undefined))}
           >
-            {feeOptions.map((opt) => (
-              <Option key={opt}>{opt}</Option>
+            {FEE_AMOUNT_TYPE_OPTIONS.map((opt) => (
+              <Option key={opt.value} value={String(opt.value)}>
+                {opt.label}
+              </Option>
             ))}
           </Dropdown>
         </Field>

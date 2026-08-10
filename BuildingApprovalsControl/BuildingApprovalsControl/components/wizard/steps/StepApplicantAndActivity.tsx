@@ -63,37 +63,37 @@ export const StepApplicantAndActivity: React.FC<StepProps> = ({ formData, onChan
           <CardHeader header={<b>Lessee Details (If Not Applicant)</b>} />
           <Field label="Name">
             <Input
-              value={formData.lessee.name ?? ""}
+              value={formData.owner.name ?? ""}
               disabled={readOnly}
-              onChange={(_, d) => set((f) => (f.lessee.name = d.value))}
+              onChange={(_, d) => set((f) => (f.owner.name = d.value))}
             />
           </Field>
           <Field label="Postal Address">
             <Input
-              value={formData.lessee.postalAddress ?? ""}
+              value={formData.owner.postalAddress ?? ""}
               disabled={readOnly}
-              onChange={(_, d) => set((f) => (f.lessee.postalAddress = d.value))}
+              onChange={(_, d) => set((f) => (f.owner.postalAddress = d.value))}
             />
           </Field>
           <Field label="Contact Person">
             <Input
-              value={formData.lessee.contactPerson ?? ""}
+              value={formData.owner.contactPerson ?? ""}
               disabled={readOnly}
-              onChange={(_, d) => set((f) => (f.lessee.contactPerson = d.value))}
+              onChange={(_, d) => set((f) => (f.owner.contactPerson = d.value))}
             />
           </Field>
           <Field label="Email">
             <Input
-              value={formData.lessee.email ?? ""}
+              value={formData.owner.email ?? ""}
               disabled={readOnly}
-              onChange={(_, d) => set((f) => (f.lessee.email = d.value))}
+              onChange={(_, d) => set((f) => (f.owner.email = d.value))}
             />
           </Field>
           <Field label="Telephone">
             <Input
-              value={formData.lessee.telephone ?? ""}
+              value={formData.owner.telephone ?? ""}
               disabled={readOnly}
-              onChange={(_, d) => set((f) => (f.lessee.telephone = d.value))}
+              onChange={(_, d) => set((f) => (f.owner.telephone = d.value))}
             />
           </Field>
         </Card>

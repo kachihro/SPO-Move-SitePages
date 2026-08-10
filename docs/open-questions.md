@@ -3,39 +3,78 @@
 Tracked from the implementation plan (`we-want-to-have-structured-treasure.md`). Confirm these before/while
 building further — do not guess at real values in code.
 
-1. **Does `context.webAPI` work inside this tenant's Power Pages-hosted PCF, and does the signed-in CIAM
-   contact resolve correctly through it?** Do the verification spike first, against
-   `https://site-df48x.powerappsportals.com/`, logged in via the real CIAM external identity flow (not as
-   admin). `index.ts` currently uses `WebApiClient`; if the spike shows `context.webAPI` doesn't work,
-   swap to `PortalRestClient` (already implemented, unused pending this decision).
-2. **Anti-forgery token retrieval mechanism** for the live site, if the REST fallback is needed.
-   `PortalRestClient.getToken()` currently assumes `window.shell.getTokenDeferred()` — confirm this is
-   still how the deployed portal exposes it, or find the actual mechanism (meta tag / hidden field).
+1. ~~Does `context.webAPI` work inside a Power Pages-hosted PCF, and does the signed-in CIAM contact
+   resolve correctly through it?~~ — **resolved, yes.** Confirmed live on `poc-cli`
+   (`orga3a7d35b.crm6.dynamics.com`): `WebApiClient` (bound via `index.ts`) successfully called
+   `context.webAPI` from the actual published Approvals page while signed in as a real CIAM portal
+   contact (not admin/maker preview) — the grid rendered and reached the Dataverse Web API. No need to
+   fall back to `PortalRestClient` on this environment. Still worth re-verifying if this ever targets a
+   different Power Pages environment/version.
+2. **Anti-forgery token retrieval mechanism** for the live site — now lower priority since (1) resolved
+   in favor of `WebApiClient`, but `PortalRestClient` is kept as a fallback. `getToken()` currently
+   assumes `window.shell.getTokenDeferred()` — unconfirmed, only matters if `PortalRestClient` ever needs
+   to be swapped in.
 3. ~~Bundled React/Fluent version~~ — **resolved**: React 16.14.0 as a PCF `platform-library`. Fluent
-   UI is also a `platform-library`, but the npm-installed 9.68.0 was **rejected on import** by the
-   `poc-cli` environment (`orga3a7d35b.crm6.dynamics.com`) with "platform library fluent_9_68_0 with
-   version 9.68.0 is not supported by the platform." Pinned to **9.46.2** instead (the version
-   Microsoft's docs cite as platform-supported alongside React 16.14.0), which imported successfully.
-   Bundling Fluent ourselves (dropping the platform-library entry) also works but blows past PCF's 5MB
-   bundle-size limit (~6.2MB) via `@fluentui/react-icons` — not worth pursuing given the platform-library
-   pin works. If a different target environment also rejects 9.46.2, this needs re-checking per org.
-4. **Real Dataverse table logical name.** Prefix `cr137` and the `cr137_applicationstatus` column are
-   confirmed from the design doc; the table name and every other field's logical name in
-   `types/BuildingApproval.ts` / `services/WebApiClient.ts` / `services/PortalRestClient.ts` are
-   placeholders. Re-pull `pac pages download-website` including forms/lists, or check
-   `make.powerapps.com`, then update `BUILDING_APPROVAL_ENTITY_SET` and the `cr137_*` field names
-   throughout.
-5. **Full list of per-trade conditional checklist panels on Step 2.** Only "Electrical" is confirmed from
-   the design-doc screenshot (`StepFeeAndChecklist.tsx`'s `KNOWN_TRADES`). Confirm the rest (Plumbing,
-   Mechanical, etc.) and any Step 1 fields below the fold not captured in the screenshots.
-6. **Who owns the Draft-only-edit enforcement plugin.** The grid/wizard only gate Edit/Delete
-   client-side today (`SubmissionsGrid`, `ApprovalWizard`'s `mode="view"`) — a Dataverse plugin on
-   Update/Delete is required for actual server-side enforcement and hasn't been built.
-7. **Whether re-pulling the code-site export changes any embedding assumptions.** The
-   `aal-sandbox-current` export provided only contains the default "Blank Template" scaffold — no
-   Building Approvals web page/form/list. Confirm the Liquid/Basic Form wiring steps once that's pulled.
+   9.68.0 (npm-installed) was rejected on import ("not supported by the platform"); pinned to **9.46.2**,
+   which imports and renders successfully. Bundling Fluent ourselves instead blows past PCF's 5MB
+   bundle-size limit (~6.2MB) via `@fluentui/react-icons` — not worth it given the platform-library pin
+   works.
+4. ~~Real Dataverse table logical name~~ — **resolved**. Pulled via
+   `pac modelbuilder build --entitynamesfilter cr137_buildingactivityapplication` against `poc-cli`:
+   - Table: `cr137_buildingactivityapplication`, entity set `cr137_buildingactivityapplications`, PK
+     `cr137_buildingactivityapplicationid`
+   - BA Number: `cr137_buildingactivitynumber`; Application date: `cr137_applicationdate`
+   - Status choice (`cr137_applicationstatus`) confirmed values: Draft=466860000, Submitted=466860001,
+     Processing=466860002, Approved=466860003, Denied=466860004
+   - **"Lessee Details" in the UI is actually `cr137_owner*` in the table** (`cr137_ownername`,
+     `cr137_ownerpostaladdress`, `cr137_ownercontactperson`, `cr137_owneremail`, `cr137_ownertelephone`)
+     — not `cr137_lessee*` as originally guessed. Code now uses `owner` (see
+     `types/BuildingApproval.ts`), not `lessee`.
+   - Building Contractor Name: `cr137_buildingcontractornamw` — **typo baked into the real column, kept
+     intentionally** in code, don't "fix" it.
+   - Location of Works → `cr137_worklocation`. Fee fields → `cr137_estimatedbuildingactivityvalue`
+     (Money), `cr137_feeamounttype` (choice, values 1–5, see `FEE_AMOUNT_TYPE_OPTIONS`). Attached
+     Documents → `cr137_supportingdocuments`.
+   - **`cr137_portaluser`** is a lookup (`EntityReference`) — this is the real "my submissions" scoping
+     field, now used in both clients' `retrieveMultiple` (`_cr137_portaluser_value eq <id>`). **4b. Still
+     unconfirmed: the lookup's target table** (assumed `contact`, since portal users are almost always
+     contacts under Table Permissions — needs confirming before `create()` ever needs to
+     `@odata.bind` this field).
+   - This table has **~140 columns total** — only the ones the current two wizard steps use are modeled
+     in `BuildingApprovalEntity`; add more as the wizard grows (see item 5).
+5. **Step 2's real checklist scope is much bigger than assumed.** The table has close to 100
+   trade/discipline-specific columns beyond Electrical: water (domestic/recycled/fire/sewerage),
+   excavation, structural setbacks, cranes/lifting, antennas/telecom (band, transmission power),
+   security/customs-controlled areas, traffic management, landscaping, waste management, asbestos,
+   heavy plant, etc. `StepFeeAndChecklist.tsx` still only models "Electrical" — this needs a scoping
+   conversation (which trades/fields actually need UI in v1 vs. later) before building further, not
+   guessing field-by-field.
+6. **Who owns the Draft-only-edit enforcement plugin.** Still not built — grid/wizard only gate
+   Edit/Delete client-side today.
+7. ~~Whether re-pulling the code-site export changes embedding assumptions~~ — **superseded**: turned out
+   embedding doesn't go through Liquid/code-site files at all for this — it's a Basic Form ("PCF" form)
+   with the `BuildingApprovalsControl` component attached to the `cr0e0_pcfanchor`/anchor field via the
+   classic Dataverse form designer (or the modern Design Studio's "Enable code component field" toggle,
+   which does the same thing), referenced by a Form component on the Approvals page. Confirmed working
+   end-to-end live.
 8. **Existing Adelaide Airport ALM/pipeline tooling, if any.** None found in this repo — confirm with
    their platform team before assuming a specific CI mechanism.
+
+## Still to do (next session)
+- **Styling**: control is functionally live but visually bare (plain header, unstyled grid) — needs a
+  container/card treatment to match the target mockups, and to confirm Fluent's theme tokens are actually
+  applying correctly inside the Power Pages page shell.
+- **Full checklist coverage** per item 5 above — needs scoping first.
+- **Hide the native Basic Form Submit button/CAPTCHA chrome** on the live page — our control has its own
+  Save Draft/Next/Submit buttons, so the form's native Submit is redundant (CAPTCHA was already turned
+  off). Likely a small custom CSS rule scoped to the Approvals page.
+- **Debug loop**: plan to use the PCF Dev Harness with a resource override (pointing the local harness's
+  bundle at the real environment / swapping in the live bundle for local debugging) to iterate faster than
+  a full `pac pcf push` per change.
+- Confirm `cr137_portaluser`'s lookup target entity (item 4b) before wiring `create()` to set it.
+- Anchor field's actual saved schema name — confirmed different from the `cr137_pcfanchor` originally
+  suggested (the publisher-prefix picker defaulted elsewhere); doesn't matter functionally (see chat), but
+  worth writing down here once known for future reference.
 
 ## Known bugs in the native implementation this rebuild is meant to fix
 - Duplicate draft record created on Save Draft.
@@ -45,6 +84,5 @@ building further — do not guess at real values in code.
 - Submissions list showing everyone's applications, not just the signed-in user's.
 
 `ApprovalWizard.tsx`'s `persist()` (create-once-then-always-update via an explicit `recordId` in
-component state) targets the first three. `WebApiClient.retrieveMultiple` / `PortalRestClient.retrieveMultiple`
-filtering by `contactId` targets the last one — but only once the real lookup column name (currently a
-`_cr137_contact_value` placeholder) is confirmed per item 4 above.
+component state) targets the first three. `WebApiClient.retrieveMultiple` filtering by `cr137_portaluser`
+(now the real, confirmed lookup field) targets the last one.

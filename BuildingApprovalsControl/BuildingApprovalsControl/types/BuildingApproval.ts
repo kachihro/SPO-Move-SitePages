@@ -1,19 +1,21 @@
-// Placeholder schema — the real Dataverse table logical name and most field logical names are NOT yet
-// confirmed (see docs/open-questions.md, item 4). Only the `cr137` publisher prefix and the
-// `cr137_applicationstatus` choice column are confirmed from the existing design doc. Re-pull the site
-// with `pac pages download-website` (including forms/lists) or check make.powerapps.com before treating
-// any other name here as real.
+// Real schema, pulled via `pac modelbuilder build --entitynamesfilter cr137_buildingactivityapplication`
+// against poc-cli (orga3a7d35b.crm6.dynamics.com) — see docs/open-questions.md item 4 for how this was
+// obtained and what's still unconfirmed (the Step 2 checklist section: this table has ~100 trade-specific
+// fields — electrical, water, excavation, cranes, antennas, security, customs, traffic management,
+// landscaping, etc. — far more than the single "Electrical" placeholder StepFeeAndChecklist.tsx models
+// today; that step needs a scoping pass before it can cover the real form).
 
-/** TODO: confirm the real table logical name (currently a placeholder). */
-export const BUILDING_APPROVAL_ENTITY_SET = "cr137_buildingapprovals";
+export const BUILDING_APPROVAL_ENTITY_SET = "cr137_buildingactivityapplications";
+export const BUILDING_APPROVAL_ENTITY_LOGICAL_NAME = "cr137_buildingactivityapplication";
+export const BUILDING_APPROVAL_ID_FIELD = "cr137_buildingactivityapplicationid";
 
-/** Confirmed real choice column name; values below are placeholders pending confirmation of the choice set. */
+/** Confirmed real choice values (cr137_applicationstatus option set). */
 export enum ApplicationStatus {
-  Draft = 100000000,
-  Submitted = 100000001,
-  Processing = 100000002,
-  Approved = 100000003,
-  Denied = 100000004,
+  Draft = 466860000,
+  Submitted = 466860001,
+  Processing = 466860002,
+  Approved = 466860003,
+  Denied = 466860004,
 }
 
 export interface Applicant {
@@ -39,17 +41,18 @@ export interface ChecklistTrade {
 }
 
 /**
- * Local component-state shape for the wizard. Field names here are working names, not confirmed
- * Dataverse logical names — the DataverseClient layer is responsible for mapping to/from real columns
- * once the schema is confirmed.
+ * Local component-state shape for the wizard. `owner` corresponds to the UI's "Lessee Details (If Not
+ * Applicant)" section — the real Dataverse columns are named cr137_owner*, not cr137_lessee* as
+ * originally guessed; kept as a separate field name here (`owner`, not `lessee`) so it stays honest
+ * about what the underlying table actually calls it.
  */
 export interface BuildingApprovalFormData {
   applicant: Applicant;
-  lessee: Applicant;
+  owner: Applicant;
   locationOfWorks?: string;
   buildingContractor: BuildingContractor;
-  estimatedValueOfBuildingActivity?: string;
-  feeAmountType?: string;
+  estimatedValueOfBuildingActivity?: number;
+  feeAmountType?: number;
   checklist: ChecklistTrade[];
   attachedDocuments?: string;
   confirmed?: boolean;
@@ -60,40 +63,53 @@ export interface BuildingApprovalRecord extends BuildingApprovalFormData {
   baNumber?: string;
   status: ApplicationStatus;
   requestDate?: string;
+  /** contact record id backing cr137_portaluser — TODO: confirm the lookup's target table is `contact` (see docs/open-questions.md item 4b). */
+  portalUserId?: string;
 }
 
 /**
- * Raw Dataverse column shape (placeholder names, see the file-level comment). Used to type-narrow
- * `ComponentFramework.WebApi.Entity` / portal REST JSON responses without resorting to `any`.
+ * Raw Dataverse column shape for the confirmed real fields we map today. The table has ~140 columns
+ * total (see docs/open-questions.md item 5) — only the ones StepApplicantAndActivity/StepFeeAndChecklist
+ * actually use are listed here; add more as the wizard grows to cover the real checklist section.
  */
 export interface BuildingApprovalEntity {
-  cr137_buildingapprovalid?: string;
-  cr137_banumber?: string;
+  cr137_buildingactivityapplicationid?: string;
+  cr137_buildingactivitynumber?: string;
   cr137_applicationstatus?: ApplicationStatus;
-  createdon?: string;
+  cr137_applicationdate?: string;
   cr137_applicantname?: string;
   cr137_applicantpostaladdress?: string;
   cr137_applicantcontactperson?: string;
   cr137_applicantemail?: string;
   cr137_applicanttelephone?: string;
-  cr137_lesseename?: string;
-  cr137_lesseepostaladdress?: string;
-  cr137_lesseecontactperson?: string;
-  cr137_lesseeemail?: string;
-  cr137_lesseetelephone?: string;
-  cr137_locationofworks?: string;
-  cr137_buildingcontractorname?: string;
-  cr137_estimatedvalue?: string;
-  cr137_feeamounttype?: string;
-  cr137_attacheddocuments?: string;
-  cr137_confirmed?: boolean;
+  cr137_ownername?: string;
+  cr137_ownerpostaladdress?: string;
+  cr137_ownercontactperson?: string;
+  cr137_owneremail?: string;
+  cr137_ownertelephone?: string;
+  cr137_worklocation?: string;
+  // Typo ("Namw" not "Name") is in the real Dataverse column — preserved intentionally.
+  cr137_buildingcontractornamw?: string;
+  cr137_estimatedbuildingactivityvalue?: number;
+  cr137_feeamounttype?: number;
+  cr137_supportingdocuments?: string;
+  _cr137_portaluser_value?: string;
 }
 
 export function emptyFormData(): BuildingApprovalFormData {
   return {
     applicant: {},
-    lessee: {},
+    owner: {},
     buildingContractor: {},
     checklist: [],
   };
 }
+
+/** cr137_buildingactivityapplication_cr137_feeamounttype option set (confirmed real values). */
+export const FEE_AMOUNT_TYPE_OPTIONS: { value: number; label: string }[] = [
+  { value: 1, label: "$350 (Value under $10000)" },
+  { value: 2, label: "$500 (Value between $10,000 and $50,000)" },
+  { value: 3, label: "$700 (Value between $50,000 and $100,000)" },
+  { value: 4, label: "$1000 + 0.15% (Value of the balance in excess of $100,000)" },
+  { value: 5, label: "AAL project" },
+];
