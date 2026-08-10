@@ -1,0 +1,4 @@
+# See per-project .gitignore files (BuildingApprovalsControl/, solutions/*/) for their own ignores.
+.vs/
+*.user
+.DS_Store

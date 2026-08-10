@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<manifest>
+  <control namespace="AdelaideAirport.PartnerPortal" constructor="BuildingApprovalsControl" version="0.0.1" display-name-key="BuildingApprovalsControl" description-key="BuildingApprovalsControl description" control-type="virtual" >
+    <!--external-service-usage node declares whether this 3rd party PCF control is using external service or not, if yes, this control will be considered as premium and please also add the external domain it is using.
+    If it is not using any external service, please set the enabled="false" and DO NOT add any domain below. The "enabled" will be false by default.
+    Example1:
+      <external-service-usage enabled="true">
+        <domain>www.Microsoft.com</domain>
+      </external-service-usage>
+    Example2:
+      <external-service-usage enabled="false">
+      </external-service-usage>
+    -->
+    <external-service-usage enabled="false">
+      <!--UNCOMMENT TO ADD EXTERNAL DOMAINS
+      <domain></domain>
+      <domain></domain>
+      -->
+    </external-service-usage>
+    <!--
+      Bound to a hidden, unused single-line-text column (cr137_pcfanchor) purely so this Basic Form field has
+      something to attach the control to. The control ignores this value entirely — all real data access goes
+      through the Dataverse client (context.webAPI / portal REST fallback), not this bound field.
+    -->
+    <property name="boundField" display-name-key="Bound Field" description-key="Unused anchor field the control is attached to" of-type="SingleLine.Text" usage="bound" required="true" />
+    <resources>
+      <code path="index.ts" order="1"/>
+      <platform-library name="React" version="16.14.0" />
+      <platform-library name="Fluent" version="9.68.0" />
+    </resources>
+    <feature-usage>
+      <uses-feature name="WebAPI" required="true" />
+      <uses-feature name="Utility" required="true" />
+    </feature-usage>
+  </control>
+</manifest>
