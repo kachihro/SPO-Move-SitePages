@@ -98,12 +98,18 @@ body:has(#BuildingApprovalsControl) .page-content {
 
 form.entity-form:has([data-logical-name*="pcfanchor"]),
 form.entity-form:has(.aal-ba-shell),
+#EntityFormPanel.crmEntityFormView:has([data-logical-name*="pcfanchor"]),
+#EntityFormPanel.crmEntityFormView:has(.aal-ba-shell),
 .crmEntityFormView:has([data-logical-name*="pcfanchor"]),
 .crmEntityFormView:has(.aal-ba-shell) {
-  margin: 0 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
   padding: 0 !important;
   width: 100% !important;
-  max-width: 100% !important;
+  max-width: ${PAGE_MAX_WIDTH} !important;
+  box-sizing: border-box !important;
 }
 
 /*
@@ -139,6 +145,15 @@ table[data-name="panel_PCF"] > tbody > tr > td,
   min-width: 0 !important;
   box-sizing: border-box !important;
   flex: 1 1 auto !important;
+}
+
+/* Beige content panel: cap + centre at original middle-pane width */
+.aal-ba-shell {
+  width: 100% !important;
+  max-width: ${PAGE_MAX_WIDTH} !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  box-sizing: border-box !important;
 }
 `;
 

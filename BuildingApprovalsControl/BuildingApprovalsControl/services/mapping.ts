@@ -20,23 +20,18 @@ export function normalizeGuid(id: string): string {
 }
 
 /**
- * Lookup payloads for cr137_portaluser → contact.
+ * Lookup bind for cr137_portaluser → contact.
  *
- * - powerPages: Power Pages' PCF webAPI polyfill strips keys containing `@odata.bind`.
- *   `_cr137_portaluser_value` is Edm.Guid — send the bare GUID only. A `/contact(guid)` string
- *   yields CDS 0x80048d19 / Power Pages 9004010D ("Cannot convert the literal … to Edm.Guid").
- * - odata: Standard Web API / PortalRestClient `/_api/` bind using the navigation property
- *   (ReferencingEntityNavigationPropertyName = cr137_PortalUser).
+ * CDS requires the navigation property (`cr137_PortalUser@odata.bind`), not `_cr137_portaluser_value`
+ * (direct ER writes → 0x80060888). Path form in `_…_value` → 0x80048d19. Power Pages' PCF webAPI
+ * polyfill strips `@odata.bind` keys, so WebApiClient applies this via raw `/_api/` PATCH
+ * (`portalApiPatch`), not `context.webAPI.updateRecord`.
  */
 export function portalUserLookupPayloads(portalUserId: string): {
-  /** Preferred for PCF context.webAPI under Power Pages (polyfill strips @odata.bind). */
-  powerPages: Record<string, string>;
-  /** Standard OData for PortalRestClient /_api/. */
   odata: Record<string, string>;
 } {
   const id = normalizeGuid(portalUserId);
   return {
-    powerPages: { _cr137_portaluser_value: id },
     odata: { "cr137_PortalUser@odata.bind": `/contacts(${id})` },
   };
 }

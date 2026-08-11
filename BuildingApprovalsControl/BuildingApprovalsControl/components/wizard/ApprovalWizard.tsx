@@ -262,7 +262,11 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
         const newId = await persist(ApplicationStatus.Submitted);
         if (!existingBa) {
           const generated = generateBaNumber(newId);
-          await client.update(newId, { baNumber: generated });
+          const portalUserId = resolvePortalContactId(contactId);
+          await client.update(newId, {
+            baNumber: generated,
+            ...(portalUserId ? { portalUserId } : {}),
+          });
           setBaNumber(generated);
         }
       }

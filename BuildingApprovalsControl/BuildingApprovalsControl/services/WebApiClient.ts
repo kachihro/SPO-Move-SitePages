@@ -10,6 +10,7 @@ import {
 } from "../types/BuildingApproval";
 import { getErrorMessage } from "./errors";
 import { entityPrimaryKey, mapFromRecord, mapToRecord, normalizeGuid, portalUserLookupPayloads } from "./mapping";
+import { portalApiBindLookup, portalApiPatch } from "./portalApi";
 
 /**
  * Implementation using context.webAPI (the same interface a model-driven-app PCF gets).
@@ -120,29 +121,15 @@ export class WebApiClient implements DataverseClient {
         );
       }
       const portalUserId = normalizeGuid(data.portalUserId);
-      const binds = portalUserLookupPayloads(portalUserId);
 
-      // Create the row first *without* the lookup. Including `_cr137_portaluser_value` on the
-      // same POST can fail on Power Pages with an opaque rejection (no OData body) even when
-      // Create permission is fine. Bind Portal User on a follow-up update instead.
+      // Scalars via webAPI; lookup via /_api/ (see ensurePortalUser).
       const result = await this.webAPI.createRecord(BUILDING_APPROVAL_ENTITY_SET, mapFromRecord(data));
       const id = normalizeGuid(result.id);
       if (!id) {
         throw new Error("Dataverse create returned no record id.");
       }
 
-      if (!(await this.hasPortalUser(id, portalUserId))) {
-        await this.trySetPortalUser(id, binds);
-      }
-
-      if (!(await this.hasPortalUser(id, portalUserId))) {
-        throw new Error(
-          "Created the application but Portal User (cr137_portaluser) did not stick. " +
-            "Check Table Permissions: Write on Building Activity Application including cr137_portaluser, " +
-            "and Append/Append To between it and Contact."
-        );
-      }
-
+      await this.ensurePortalUser(id, portalUserId);
       return id;
     });
   }
@@ -150,61 +137,100 @@ export class WebApiClient implements DataverseClient {
   public async update(id: string, data: Partial<BuildingApprovalRecord>): Promise<void> {
     return this.wrap("update", async () => {
       const payload = mapFromRecord(data);
-      if (data.portalUserId) {
-        const binds = portalUserLookupPayloads(data.portalUserId);
-        Object.assign(payload, binds.powerPages);
-        await this.webAPI.updateRecord(BUILDING_APPROVAL_ENTITY_SET, normalizeGuid(id), payload);
-        // If the preferred shape didn't stick, retry alternates (lookup-only — don't rewrite other fields).
-        if (!(await this.hasPortalUser(id, data.portalUserId))) {
-          await this.trySetPortalUser(id, binds);
-        }
-        return;
-      }
+      // Never put `_cr137_portaluser_value` or @odata.bind on webAPI.updateRecord —
+      // direct ER write → 0x80060888; @odata.bind is stripped by the Power Pages polyfill.
       await this.webAPI.updateRecord(BUILDING_APPROVAL_ENTITY_SET, normalizeGuid(id), payload);
+      if (data.portalUserId) {
+        await this.ensurePortalUser(id, data.portalUserId);
+      }
     });
   }
 
-  /** Confirm _cr137_portaluser_value matches the contact we tried to bind. */
+  /**
+   * Confirm _cr137_portaluser_value on *this* record matches the contact.
+   * Always matches by primary key — never trust entities[0] from a $filter alone (Power Pages
+   * can ignore/mis-apply $filter, which previously false-positived and skipped the bind).
+   */
   private async hasPortalUser(recordId: string, portalUserId: string): Promise<boolean> {
     const want = normalizeGuid(portalUserId).toLowerCase();
+    const id = normalizeGuid(recordId).toLowerCase();
     const select = `?$select=${BUILDING_APPROVAL_ID_FIELD},_cr137_portaluser_value`;
+
+    const portalUserOn = (row: BuildingApprovalEntity | undefined): boolean => {
+      if (!row) return false;
+      if (entityPrimaryKey(row).toLowerCase() !== id) return false;
+      const got = normalizeGuid(row._cr137_portaluser_value ?? "").toLowerCase();
+      return !!got && got === want;
+    };
+
     try {
       const filtered = await this.webAPI.retrieveMultipleRecords(
         BUILDING_APPROVAL_ENTITY_SET,
-        `${select}&$filter=${BUILDING_APPROVAL_ID_FIELD} eq ${normalizeGuid(recordId)}`
+        `${select}&$filter=${BUILDING_APPROVAL_ID_FIELD} eq '${normalizeGuid(recordId)}'`
       );
-      const row = filtered.entities?.[0] as BuildingApprovalEntity | undefined;
-      const got = normalizeGuid(row?._cr137_portaluser_value ?? "").toLowerCase();
-      if (got && got === want) return true;
+      for (const e of filtered.entities ?? []) {
+        if (portalUserOn(e as unknown as BuildingApprovalEntity)) return true;
+      }
     } catch {
-      /* fall through to unfiltered scan */
+      /* fall through */
     }
 
     try {
       const result = await this.webAPI.retrieveMultipleRecords(BUILDING_APPROVAL_ENTITY_SET, select);
-      const row = result.entities.find(
-        (e) => entityPrimaryKey(e as unknown as BuildingApprovalEntity).toLowerCase() === normalizeGuid(recordId).toLowerCase()
-      ) as BuildingApprovalEntity | undefined;
-      const got = normalizeGuid(row?._cr137_portaluser_value ?? "").toLowerCase();
-      return !!got && got === want;
+      for (const e of result.entities ?? []) {
+        if (portalUserOn(e as unknown as BuildingApprovalEntity)) return true;
+      }
     } catch {
-      return false;
+      /* ignore */
     }
+    return false;
   }
 
-  private async trySetPortalUser(
-    recordId: string,
-    binds: ReturnType<typeof portalUserLookupPayloads>
-  ): Promise<void> {
+  /** Bind Portal User and fail the save if it does not stick on this record. */
+  private async ensurePortalUser(recordId: string, portalUserId: string): Promise<void> {
     const id = normalizeGuid(recordId);
-    // Prefer bare GUID on `_…_value` (Edm.Guid). Fall back to @odata.bind for non-PP hosts.
-    for (const payload of [binds.powerPages, binds.odata]) {
+    const contactId = normalizeGuid(portalUserId);
+    if (await this.hasPortalUser(id, contactId)) return;
+
+    const errors: string[] = [];
+    const navProps = ["cr137_PortalUser", "cr137_portaluser"];
+
+    for (const nav of navProps) {
       try {
-        await this.webAPI.updateRecord(BUILDING_APPROVAL_ENTITY_SET, id, payload);
-      } catch {
-        /* try next shape */
+        await portalApiBindLookup(BUILDING_APPROVAL_ENTITY_SET, id, nav, "contacts", contactId);
+        if (await this.hasPortalUser(id, contactId)) return;
+        errors.push(`/${nav}/$ref returned OK but lookup still blank`);
+      } catch (err: unknown) {
+        errors.push(`/${nav}/$ref: ${getErrorMessage(err)}`);
       }
     }
+
+    for (const nav of navProps) {
+      try {
+        await portalApiPatch(`${BUILDING_APPROVAL_ENTITY_SET}(${id})`, {
+          [`${nav}@odata.bind`]: `/contacts(${contactId})`,
+        });
+        if (await this.hasPortalUser(id, contactId)) return;
+        errors.push(`PATCH ${nav}@odata.bind returned OK but lookup still blank`);
+      } catch (err: unknown) {
+        errors.push(`PATCH ${nav}@odata.bind: ${getErrorMessage(err)}`);
+      }
+    }
+
+    // Keep mapping helper in sync for PortalRestClient; attempt its shape last.
+    try {
+      await portalApiPatch(`${BUILDING_APPROVAL_ENTITY_SET}(${id})`, portalUserLookupPayloads(contactId).odata);
+      if (await this.hasPortalUser(id, contactId)) return;
+    } catch (err: unknown) {
+      errors.push(getErrorMessage(err));
+    }
+
+    throw new Error(
+      "Portal User (cr137_portaluser) did not stick on this application. " +
+        "Check Table Permissions: Write + Append on Building Activity Application for cr137_portaluser, " +
+        "Append To on Contact, and that Contact is Web API enabled. Attempts: " +
+        errors.join(" | ")
+    );
   }
 
   public async deleteRecord(id: string): Promise<void> {

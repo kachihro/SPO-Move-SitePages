@@ -37,12 +37,10 @@ building further — do not guess at real values in code.
      Documents → `cr137_supportingdocuments`.
    - **`cr137_portaluser`** is a lookup (`EntityReference`) — this is the real "my submissions" scoping
      field (client-side filter on `_cr137_portaluser_value`). **4b. resolved**: Target is `contact`.
-     Raw Portal `/_api/` uses `"cr137_PortalUser@odata.bind": "/contacts(<id>)"` (nav prop
-     `cr137_PortalUser`). **PCF `context.webAPI` must NOT use `@odata.bind`** (Power Pages polyfill
-     strips it) and must NOT put `/contact(<id>)` into `_cr137_portaluser_value` (that field is
-     `Edm.Guid` — path form yields CDS `0x80048d19` / `9004010D`). Use bare GUID:
-     `"_cr137_portaluser_value": "<id>"` via `portalUserLookupPayloads()` in `mapping.ts`. Create
-     writes the row first, then PATCHes the lookup.
+     Writes must use `"cr137_PortalUser@odata.bind": "/contacts(<id>)"` (nav prop). Direct
+     `_cr137_portaluser_value` updates → CDS `0x80060888`; path-in-`_value` → `0x80048d19`.
+     Power Pages' PCF `webAPI` polyfill strips `@odata.bind`, so `WebApiClient` PATCHes the lookup
+     via raw portal `/_api/` (`portalApi.ts`) after create/update of scalar fields.
    - This table has **~140 columns total** — only the ones the current wizard steps use are modeled in
      `BuildingApprovalEntity`; add more as the wizard grows (see item 5).
 5. **Step 2's real checklist scope.** Resolved which columns exist (full pull below), but only a subset is
