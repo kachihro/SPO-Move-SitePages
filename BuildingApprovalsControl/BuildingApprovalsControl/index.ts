@@ -1,6 +1,7 @@
 import { IInputs, IOutputs } from "./generated/ManifestTypes";
 import * as React from "react";
 import { BuildingApprovalsApp } from "./components/BuildingApprovalsApp";
+import { resolvePortalContactId } from "./services/portalContactId";
 import { WebApiClient } from "./services/WebApiClient";
 
 export class BuildingApprovalsControl implements ComponentFramework.ReactControl<IInputs, IOutputs> {
@@ -26,10 +27,8 @@ export class BuildingApprovalsControl implements ComponentFramework.ReactControl
         // for a PortalRestClient(siteBaseUrl) instance instead. Keep the swap isolated to this one line.
         const client = new WebApiClient(context.webAPI);
 
-        // TODO: confirm how the signed-in CIAM contact's id is actually exposed to a Power Pages-hosted
-        // PCF (context.userSettings.userId is the model-driven-app convention and may not map directly
-        // under Microsoft Entra External ID auth — see docs/open-questions.md item 1).
-        const contactId = context.userSettings.userId;
+        // Power Pages often leaves userSettings.userId empty — prefer Liquid-rendered #aal-portal-contact-id.
+        const contactId = resolvePortalContactId(context.userSettings?.userId);
 
         return React.createElement(BuildingApprovalsApp, { client, contactId });
     }

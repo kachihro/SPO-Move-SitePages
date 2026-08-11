@@ -36,19 +36,46 @@ building further — do not guess at real values in code.
      (Money), `cr137_feeamounttype` (choice, values 1–5, see `FEE_AMOUNT_TYPE_OPTIONS`). Attached
      Documents → `cr137_supportingdocuments`.
    - **`cr137_portaluser`** is a lookup (`EntityReference`) — this is the real "my submissions" scoping
-     field, now used in both clients' `retrieveMultiple` (`_cr137_portaluser_value eq <id>`). **4b. Still
-     unconfirmed: the lookup's target table** (assumed `contact`, since portal users are almost always
-     contacts under Table Permissions — needs confirming before `create()` ever needs to
-     `@odata.bind` this field).
-   - This table has **~140 columns total** — only the ones the current two wizard steps use are modeled
-     in `BuildingApprovalEntity`; add more as the wizard grows (see item 5).
-5. **Step 2's real checklist scope is much bigger than assumed.** The table has close to 100
-   trade/discipline-specific columns beyond Electrical: water (domestic/recycled/fire/sewerage),
-   excavation, structural setbacks, cranes/lifting, antennas/telecom (band, transmission power),
-   security/customs-controlled areas, traffic management, landscaping, waste management, asbestos,
-   heavy plant, etc. `StepFeeAndChecklist.tsx` still only models "Electrical" — this needs a scoping
-   conversation (which trades/fields actually need UI in v1 vs. later) before building further, not
-   guessing field-by-field.
+     field, now used in both clients' `retrieveMultiple` (`_cr137_portaluser_value eq <id>`). **4b.
+     resolved**: `create()` now wires it via `"cr137_portaluser@odata.bind": "/contacts(<id>)"` in
+     `mapping.ts`, assuming `contact` as the target table (portal users are contacts under Table
+     Permissions on every environment seen so far) — worth a live-create smoke test since that assumption
+     was never independently re-confirmed against the metadata, just carried forward.
+   - This table has **~140 columns total** — only the ones the current wizard steps use are modeled in
+     `BuildingApprovalEntity`; add more as the wizard grows (see item 5).
+5. **Step 2's real checklist scope.** Resolved which columns exist (full pull below), but only a subset is
+   built. The source PDF (`APPLICATION FOR BUILDING ACTIVITY CONSENT`, shared 2026-08-11) has 23 checklist
+   categories; `pac modelbuilder build` against `poc-cli` on the same date confirmed the real column list
+   for all of them. **Modeled today** (`types/BuildingApproval.ts`, `StepFeeAndChecklist.tsx`): Electrical
+   (`cr137_electricalsupplyapplicationrequir`, `cr137_meterprovided`, `cr137_ampsperphase`,
+   `cr137_totalpowerdemand`, `cr137_electricalmaximumdemandandsupply`), Hydraulics (per-utility
+   `cr137_domesticwater*`/`cr137_recycledwater*`/`cr137_sewerage*`/`cr137_firewater*` fields plus
+   `cr137_backflowpreventiondeviceconfirmat`), and Security (`cr137_securityrestrictedarea`,
+   `cr137_customscontrolledarea`, `cr137_sterilearea`, `cr137_airsidefencechangerequired`,
+   `cr137_securitydesigndetails`). **~20 categories not yet built** (Application Documentation,
+   Development Details, Certificates, Site Services, Lighting, Communications, Stormwater, Fire
+   Engineering, Gas, Ventilation, Radio Interference, Structure, DDA, Environment/Sustainability,
+   Excavation, Waste Management, Asbestos, Dust/Fumes/Odours, Hazardous Materials, Construction Activity)
+   — column names for these were also pulled and are known, just not wired into the type/mapping/UI yet.
+   Notable findings from the pull, worth knowing before building the rest:
+   - The PDF's Yes/No/N/A checkbox rows are **plain nullable `bool` columns**, not a three-state choice —
+     "unanswered" (neither radio selected) stands in for N/A. See `YesNoField.tsx`.
+   - Several rows that *look* like Yes/No/N/A on paper are actually **free-text `string` columns** in the
+     real schema — confirmed, not a guess: `cr137_masterplanreference`, `cr137_environmentalstrategy`,
+     `cr137_mdpdetails` (page 2 "Works Comply With"), and `cr137_securitydesigndetails` (Security's last
+     row). Render these as text inputs, not Yes/No toggles.
+   - The PDF's "Building Contractor" section fields (everything except Name) map to `cr137_consultant*`
+     columns, not `cr137_buildingcontractor*` — same "UI label ≠ column name" quirk as Owner/Lessee.
+   - **Gas** (category 11) uses generic, unprefixed column names — `cr137_connectionrequired`,
+     `cr137_meterprovidedforconnection`, `cr137_demandforconnection` — while every other utility
+     (domestic/recycled/sewerage/fire water) got its own prefixed columns. Confirmed by matching the
+     PDF's field order/shape, not by a `cr137_gas*` name existing (it doesn't) — double-check this
+     mapping against a live record before wiring Gas's UI.
+   - The PDF's "Number of Phases" (1/2/3) under Electrical has **no dedicated column** — captured as free
+     text inside `cr137_electricalmaximumdemandandsupply` instead (see the field's comment in
+     `types/BuildingApproval.ts`).
+   - `cr137_applicantsignature` + `cr137_signaturedate` back the page-2 "Signature of Owner or Agent"
+     section — there's only one signature field (not separate applicant/owner signatures).
 6. **Who owns the Draft-only-edit enforcement plugin.** Still not built — grid/wizard only gate
    Edit/Delete client-side today.
 7. ~~Whether re-pulling the code-site export changes embedding assumptions~~ — **superseded**: turned out
@@ -59,6 +86,17 @@ building further — do not guess at real values in code.
    end-to-end live.
 8. **Existing Adelaide Airport ALM/pipeline tooling, if any.** None found in this repo — confirm with
    their platform team before assuming a specific CI mechanism.
+9. **404 on `cr137_buildingactivityapplications` against `poc-aal-pcf.powerappsportals.com`** (seen
+   2026-08-11) — this is a *different* portal host than the one item 1 was confirmed against
+   (`poc-cli`/`orga3a7d35b.crm6.dynamics.com`). Entity set name is correct per item 4, so this is almost
+   certainly environment config on `poc-aal-pcf`, not a code bug: either the `cr137_buildingactivityapplication`
+   table/solution hasn't been imported into that environment yet, or the table has no Table Permissions
+   configured for it on that portal (Power Pages returns 404, not 403, when a table lacks Table
+   Permissions — a common footgun). Confirm which before assuming the client code needs changes. Separately,
+   `WebApiClient`'s promise sometimes rejected with `undefined` (not an `Error`) when this happened, which
+   crashed the UI's own `catch` blocks and hid the real failure — fixed via `services/errors.ts`'s
+   `getErrorMessage()`, now used in every `ApprovalWizard`/`SubmissionsGrid` catch site, independent of
+   root-causing the 404 itself.
 
 ## Still to do (next session)
 - ~~**Styling**~~ — **done**: custom Fluent brand theme (`components/theme.ts`, magenta/pink ramp
@@ -72,10 +110,19 @@ building further — do not guess at real values in code.
   design tokens if/when supplied. **Not** in this control's scope (native Power Pages page chrome per item
   7): the login/dashboard pages, the page eyebrow/title/breadcrumb text, and hiding the native Basic Form
   Submit button — those live outside this repo.
-- **Full checklist coverage** per item 5 above — needs scoping first.
+- **Full checklist coverage** per item 5 above — Electrical/Hydraulics/Security built 2026-08-11; ~20
+  categories remain, column names already known from the same schema pull.
 - **Hide the native Basic Form Submit button/CAPTCHA chrome** on the live page — our control has its own
   Save Draft/Next/Submit buttons, so the form's native Submit is redundant (CAPTCHA was already turned
   off). Likely a small custom CSS rule scoped to the Approvals page.
+- **Hide the native "PCF Anchor" field label** (`<label id="cr0e0_pcfanchor_label">`) that the classic
+  Basic Form renders above the control (per item 7, it's a Form/Design Studio field label, not something
+  this repo's code renders or can reach). Same fix as the Submit button above — add to that page's Custom
+  CSS in Power Pages Studio (Portal Management → the Approvals page → Advanced → Custom CSS, or the
+  page's own web-page CSS content if it has one):
+  ```css
+  #cr0e0_pcfanchor_label { display: none; }
+  ```
 - **Debug loop**: plan to use the PCF Dev Harness with a resource override (pointing the local harness's
   bundle at the real environment / swapping in the live bundle for local debugging) to iterate faster than
   a full `pac pcf push` per change.
@@ -85,14 +132,15 @@ building further — do not guess at real values in code.
   worth writing down here once known for future reference.
 
 ## Upcoming build features (flagged 2026-08-11)
-1. **Prove form branching logic (Yes/No reveal further questions).** `StepFeeAndChecklist.tsx` already has
-   a working example of this pattern for the "Electrical" trade (the "New supply required" checkbox reveals
-   Voltage/Increased-supply-required, which itself reveals Present/Requested Supply rating) — needs
-   confirming this is the pattern to replicate, and then applying it across the ~100 other trade columns
-   once item 5's scoping happens, plus to the newer fields visible in the shared mockups (Description of
-   Works, Purpose of Works, Estimated Start/Completion Date) that aren't modeled in
-   `types/BuildingApproval.ts` yet — **don't guess real column names for these, confirm against the schema
-   first**, same rule as item 4.
+1. ~~**Prove form branching logic (Yes/No reveal further questions).**~~ — **demonstrated**:
+   `StepFeeAndChecklist.tsx`'s Electrical section only reveals Meter Provided/Amps Per Phase/Total Power
+   Demand/details once "Application for electrical supply required" is Yes, and Hydraulics only reveals
+   each utility's Meter Provided/Demand once that utility's "Connection required" is Yes — verified
+   working in the PCF test harness (radio toggle → fields appear), not just read from source. Applying
+   the same pattern to the ~20 remaining checklist categories is just repetition of this pattern once each
+   category's real fields are wired in (see item 5) — no further design questions here. Description of
+   Works/Purpose of Works/Estimated Start-Completion Date are now modeled too
+   (`cr137_workdescription`/`cr137_workpurpose`/`cr137_estimatedstartdate`/`cr137_estimatedcompletiondate`).
 2. **Finalise 'Draft' functionality for users to continue applications.** Largely already implemented:
    `ApprovalWizard`'s `persist()` is create-once-then-always-update via explicit `recordId` state (fixes
    the duplicate-draft bug below), and edit/view mode loads the record via `client.retrieve(recordId)` on

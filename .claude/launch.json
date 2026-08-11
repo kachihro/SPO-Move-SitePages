@@ -5,7 +5,8 @@
       "name": "pcf-harness",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "BuildingApprovalsControl", "run", "start"],
-      "port": 8181
+      "port": 8181,
+      "autoPort": true
     },
     {
       "name": "pcf-harness-watch",

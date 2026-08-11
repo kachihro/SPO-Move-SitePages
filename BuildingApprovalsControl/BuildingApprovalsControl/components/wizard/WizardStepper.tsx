@@ -1,32 +1,40 @@
 import * as React from "react";
-import { makeStyles, mergeClasses, tokens } from "@fluentui/react-components";
+import { makeStyles, mergeClasses } from "@fluentui/react-components";
 import { heroButtonGradient } from "../theme";
 
 const useStyles = makeStyles({
   list: {
     display: "flex",
-    gap: tokens.spacingHorizontalS,
-    marginBottom: tokens.spacingVerticalM,
+    gap: "10px",
+    marginBottom: "20px",
+    alignItems: "center",
   },
   step: {
     border: "none",
     borderRadius: "999px",
-    padding: `${tokens.spacingVerticalSNudge} ${tokens.spacingHorizontalL}`,
-    fontWeight: tokens.fontWeightSemibold,
-    fontSize: tokens.fontSizeBase300,
-    fontFamily: tokens.fontFamilyBase,
+    minWidth: "88px",
+    height: "36px",
+    paddingLeft: "18px",
+    paddingRight: "18px",
+    fontWeight: 600,
+    fontSize: "14px",
+    fontFamily: "inherit",
     cursor: "pointer",
-    backgroundColor: tokens.colorNeutralBackground3,
-    color: tokens.colorNeutralForeground3,
+    backgroundColor: "#E8E4DE",
+    color: "#5C574F",
+    boxShadow: "none",
     ":hover": {
-      backgroundColor: tokens.colorNeutralBackground3Hover,
+      backgroundColor: "#DDD8D0",
     },
   },
   active: {
+    backgroundColor: "transparent",
     backgroundImage: heroButtonGradient,
     color: "#ffffff",
+    boxShadow: "0 2px 8px rgba(194, 38, 114, 0.3)",
     ":hover": {
       backgroundImage: heroButtonGradient,
+      color: "#ffffff",
     },
   },
 });

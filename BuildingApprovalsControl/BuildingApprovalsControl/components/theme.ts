@@ -27,5 +27,5 @@ const airportBrandRamp: BrandVariants = {
 export const airportTheme: Theme = createLightTheme(airportBrandRamp);
 
 /** Gradient used for the primary "hero" actions (Create, Submit) to match the mockup's pill button. */
-export const heroButtonGradient = "linear-gradient(135deg, #C22672 0%, #E2477E 100%)";
-export const heroButtonGradientHover = "linear-gradient(135deg, #A81F62 0%, #DB4998 100%)";
+export const heroButtonGradient = "linear-gradient(135deg, #C22672 0%, #8E2B8B 100%)";
+export const heroButtonGradientHover = "linear-gradient(135deg, #A81F62 0%, #7A2478 100%)";
