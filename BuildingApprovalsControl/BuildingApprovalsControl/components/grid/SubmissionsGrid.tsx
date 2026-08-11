@@ -19,55 +19,56 @@ import {
 } from "@fluentui/react-components";
 import { useDataverseClient } from "../../services/DataverseClientContext";
 import { getErrorMessage } from "../../services/errors";
+import { normalizeGuid } from "../../services/mapping";
 import { MISSING_CONTACT_ID_MESSAGE } from "../../services/portalContactId";
 import { ApplicationStatus, BuildingApprovalRecord } from "../../types/BuildingApproval";
 import { HeroButton } from "../HeroButton";
 
 const useStyles = makeStyles({
-  /** Matches the original `.aal-submissions` page panel. */
+  /** Paper panel — width follows the portal host (widened to 1600px). */
   root: {
     display: "flex",
     flexDirection: "column",
     boxSizing: "border-box",
     width: "100%",
-    maxWidth: "1100px",
+    maxWidth: "1600px",
     marginLeft: "auto",
     marginRight: "auto",
-    padding: "40px 48px 48px",
-    borderRadius: "20px",
-    backgroundColor: "#FBF8F4",
-    boxShadow: "0 8px 28px rgba(40, 30, 20, 0.08)",
-    border: "1px solid rgba(40, 30, 20, 0.06)",
+    padding: "12px 24px 48px",
+    backgroundColor: "#F5F5F2",
+    color: "#1B1B29",
   },
   hero: {
     display: "flex",
     flexDirection: "column",
-    gap: "8px",
+    gap: "16px",
     marginBottom: "28px",
     maxWidth: "720px",
   },
+
   eyebrow: {
     margin: 0,
-    fontSize: "12px",
+    fontSize: "11px",
     fontWeight: 600,
-    letterSpacing: "0.12em",
+    letterSpacing: "0.16em",
     textTransform: "uppercase",
-    color: "#8A8178",
+    color: "#66247F",
   },
   title: {
     margin: 0,
-    fontSize: "40px",
+    fontSize: "44px",
     fontWeight: 700,
-    color: "#1B1B1B",
-    lineHeight: 1.15,
-    letterSpacing: "-0.02em",
+    color: "#1B1B29",
+    lineHeight: 1.12,
+    letterSpacing: "-0.01em",
   },
   lede: {
     margin: 0,
-    marginTop: "4px",
+    maxWidth: "560px",
     fontSize: "16px",
-    color: "#6B6560",
-    lineHeight: 1.5,
+    fontWeight: 400,
+    color: "#5C5E6B",
+    lineHeight: 1.55,
   },
   toast: {
     marginBottom: "16px",
@@ -80,33 +81,37 @@ const useStyles = makeStyles({
   toolbar: {
     display: "flex",
     justifyContent: "flex-end",
-    marginBottom: "16px",
+    alignItems: "center",
+    marginBottom: "20px",
+    minHeight: "44px",
   },
   shell: {
-    border: "1px solid #E6E1DA",
-    borderRadius: "16px",
+    border: "1px solid #E2E1DC",
+    borderRadius: "18px",
     overflow: "hidden",
     backgroundColor: "#FFFFFF",
-    boxShadow: "0 2px 10px rgba(40, 30, 20, 0.06)",
+    boxShadow: "0 1px 2px rgba(27, 27, 41, 0.04), 0 8px 24px rgba(27, 27, 41, 0.06)",
   },
   headerRow: {
-    backgroundColor: "#F3F0EB",
+    backgroundColor: "#EFEFEB",
   },
   headerCell: {
     fontSize: "11px",
     fontWeight: 600,
     textTransform: "uppercase",
     letterSpacing: "0.08em",
-    color: "#8A8178",
+    color: "#8A8C97",
   },
   row: {
     backgroundColor: "#FFFFFF",
+    cursor: "pointer",
     ":hover": {
       backgroundColor: "#F8F5F1",
     },
   },
   rowAlt: {
     backgroundColor: "#FAF7F3",
+    cursor: "pointer",
     ":hover": {
       backgroundColor: "#F3EFE9",
     },
@@ -154,6 +159,18 @@ const useStyles = makeStyles({
     gap: tokens.spacingVerticalM,
     padding: "64px 24px",
     color: "#6B6560",
+  },
+  /** Keeps the record GUID on each row (like legacy data-id) without showing it. */
+  hiddenKey: {
+    position: "absolute",
+    width: "1px",
+    height: "1px",
+    padding: 0,
+    margin: "-1px",
+    overflow: "hidden",
+    clip: "rect(0, 0, 0, 0)",
+    whiteSpace: "nowrap",
+    border: 0,
   },
 });
 
@@ -221,11 +238,14 @@ export const SubmissionsGrid: React.FC<SubmissionsGridProps> = ({
     return () => window.clearTimeout(timer);
   }, [draftSaved, onDraftToastShown]);
 
-  const openRecord = (item: BuildingApprovalRecord) => {
-    if (item.status === ApplicationStatus.Draft) {
-      onEdit(item.id);
+  /** Open by the row GUID — required when several drafts all display as "Draft". */
+  const openByGuid = (guid: string, status: ApplicationStatus) => {
+    const id = normalizeGuid(guid);
+    if (!id) return;
+    if (status === ApplicationStatus.Draft) {
+      onEdit(id);
     } else {
-      onView(item.id);
+      onView(id);
     }
   };
 
@@ -250,7 +270,25 @@ export const SubmissionsGrid: React.FC<SubmissionsGridProps> = ({
       renderHeaderCell: () => "BA Number",
       renderCell: (item) => (
         <TableCellLayout>
-          <Link className={styles.baLink} onClick={() => openRecord(item)}>
+          <input
+            type="hidden"
+            className={styles.hiddenKey}
+            name="aal-ba-record-id"
+            value={normalizeGuid(item.id)}
+            readOnly
+            tabIndex={-1}
+            aria-hidden="true"
+            data-id={normalizeGuid(item.id)}
+          />
+          <Link
+            className={styles.baLink}
+            data-id={normalizeGuid(item.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              const fromDom = normalizeGuid(e.currentTarget.getAttribute("data-id") ?? "");
+              openByGuid(fromDom || item.id, item.status);
+            }}
+          >
             {item.baNumber?.trim() ? item.baNumber : "Draft"}
           </Link>
         </TableCellLayout>
@@ -264,7 +302,9 @@ export const SubmissionsGrid: React.FC<SubmissionsGridProps> = ({
         if (!email) return "";
         return (
           <TableCellLayout>
-            <Link href={`mailto:${email}`}>{email}</Link>
+            <Link href={`mailto:${email}`} onClick={(e) => e.stopPropagation()}>
+              {email}
+            </Link>
           </TableCellLayout>
         );
       },
@@ -286,7 +326,7 @@ export const SubmissionsGrid: React.FC<SubmissionsGridProps> = ({
   ];
 
   return (
-    <div className={styles.root}>
+    <div className={mergeClasses(styles.root, "aal-ba-shell")}>
       <section className={styles.hero}>
         <p className={styles.eyebrow}>Building approvals</p>
         <h1 className={styles.title}>Track and manage your submissions.</h1>
@@ -302,7 +342,9 @@ export const SubmissionsGrid: React.FC<SubmissionsGridProps> = ({
       )}
 
       <div className={styles.toolbar} aria-label="Submission actions">
-        <HeroButton onClick={onCreate}>Create</HeroButton>
+        <HeroButton onClick={onCreate} disabled={!contactId}>
+          Create
+        </HeroButton>
       </div>
 
       {error && (
@@ -317,12 +359,19 @@ export const SubmissionsGrid: React.FC<SubmissionsGridProps> = ({
         <section className={styles.shell}>
           <div className={styles.emptyState}>
             <span>No submissions yet.</span>
-            <HeroButton onClick={onCreate}>Create your first application</HeroButton>
+            <HeroButton onClick={onCreate} disabled={!contactId}>
+              Create your first application
+            </HeroButton>
           </div>
         </section>
       ) : (
         <section className={styles.shell}>
-          <DataGrid items={records} columns={columns} getRowId={(item: BuildingApprovalRecord) => item.id} sortable>
+          <DataGrid
+            items={records}
+            columns={columns}
+            getRowId={(item: BuildingApprovalRecord) => normalizeGuid(item.id)}
+            sortable
+          >
             <DataGridHeader className={styles.headerRow}>
               <DataGridRow>
                 {({ renderHeaderCell }) => (
@@ -333,8 +382,20 @@ export const SubmissionsGrid: React.FC<SubmissionsGridProps> = ({
             <DataGridBody<BuildingApprovalRecord>>
               {({ item, rowId }) => {
                 const index = records.findIndex((r) => r.id === item.id);
+                const recordGuid = normalizeGuid(item.id);
                 return (
-                  <DataGridRow<BuildingApprovalRecord> key={rowId} className={index % 2 === 1 ? styles.rowAlt : styles.row}>
+                  <DataGridRow<BuildingApprovalRecord>
+                    key={rowId}
+                    className={index % 2 === 1 ? styles.rowAlt : styles.row}
+                    data-id={recordGuid}
+                    data-entityid={recordGuid}
+                    onClick={(e: React.MouseEvent<HTMLElement>) => {
+                      const fromDom =
+                        normalizeGuid(e.currentTarget.getAttribute("data-id") ?? "") ||
+                        normalizeGuid(e.currentTarget.getAttribute("data-entityid") ?? "");
+                      openByGuid(fromDom || recordGuid, item.status);
+                    }}
+                  >
                     {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
                   </DataGridRow>
                 );

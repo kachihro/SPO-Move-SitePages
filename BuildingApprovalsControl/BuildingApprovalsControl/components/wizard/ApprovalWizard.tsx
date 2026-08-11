@@ -1,7 +1,9 @@
 import * as React from "react";
-import { Link, makeStyles, MessageBar, MessageBarBody, Spinner, tokens } from "@fluentui/react-components";
+import { Link, makeStyles, mergeClasses, MessageBar, MessageBarBody, Spinner } from "@fluentui/react-components";
+import { generateBaNumber } from "../../services/baNumber";
 import { useDataverseClient } from "../../services/DataverseClientContext";
 import { getErrorMessage } from "../../services/errors";
+import { MISSING_CONTACT_ID_MESSAGE, resolvePortalContactId } from "../../services/portalContactId";
 import { ApplicationStatus, BuildingApprovalFormData, emptyFormData } from "../../types/BuildingApproval";
 import { HeroButton } from "../HeroButton";
 import { WizardStepper } from "./WizardStepper";
@@ -15,21 +17,20 @@ const useStyles = makeStyles({
     flexDirection: "column",
     boxSizing: "border-box",
     width: "100%",
-    maxWidth: "1100px",
+    maxWidth: "1600px",
     marginLeft: "auto",
     marginRight: "auto",
-    padding: "40px 48px 48px",
-    borderRadius: "20px",
-    backgroundColor: "#FBF8F4",
-    boxShadow: "0 8px 28px rgba(40, 30, 20, 0.08)",
-    border: "1px solid rgba(40, 30, 20, 0.06)",
+    padding: "12px 24px 48px",
+    backgroundColor: "#F5F5F2",
+    color: "#1B1B29",
   },
   pageHeader: {
     display: "flex",
     flexDirection: "column",
     gap: "8px",
-    marginBottom: "20px",
+    marginBottom: "16px",
   },
+
   breadcrumb: {
     fontSize: "12px",
     fontWeight: 600,
@@ -41,26 +42,26 @@ const useStyles = makeStyles({
   },
   eyebrow: {
     margin: 0,
-    fontSize: "12px",
+    fontSize: "11px",
     fontWeight: 600,
-    letterSpacing: "0.12em",
+    letterSpacing: "0.16em",
     textTransform: "uppercase",
-    color: "#8A8178",
+    color: "#66247F",
   },
   title: {
     margin: 0,
-    fontSize: "40px",
+    fontSize: "44px",
     fontWeight: 700,
-    color: "#1B1B1B",
-    lineHeight: 1.15,
-    letterSpacing: "-0.02em",
+    color: "#1B1B29",
+    lineHeight: 1.12,
+    letterSpacing: "-0.01em",
   },
   blurb: {
     margin: 0,
     marginTop: "4px",
     fontSize: "16px",
-    color: "#6B6560",
-    lineHeight: 1.5,
+    color: "#5C5E6B",
+    lineHeight: 1.55,
     maxWidth: "720px",
   },
   tip: {
@@ -75,14 +76,6 @@ const useStyles = makeStyles({
     fontWeight: 600,
     fontStyle: "normal",
   },
-  formPanel: {
-    marginTop: "4px",
-    padding: "28px 32px",
-    borderRadius: "16px",
-    backgroundColor: "#FFFFFF",
-    border: "1px solid #E8E2DA",
-    boxShadow: "0 4px 18px rgba(40, 30, 20, 0.06)",
-  },
   footer: {
     display: "flex",
     justifyContent: "space-between",
@@ -93,6 +86,11 @@ const useStyles = makeStyles({
   footerActions: {
     display: "flex",
     gap: "10px",
+  },
+  allSteps: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "28px",
   },
 });
 
@@ -126,17 +124,63 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
   const [error, setError] = React.useState<string | undefined>(undefined);
 
   React.useEffect(() => {
-    if (mode === "new" || !initialRecordId) return;
+    if (mode === "new") return;
+
+    const id = (initialRecordId ?? "").replace(/[{}]/g, "").trim();
+    if (!id) {
+      setError("Missing application id — cannot load this draft.");
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
     setLoading(true);
+    setError(undefined);
+
     void client
-      .retrieve(initialRecordId)
+      .retrieve(id)
       .then((record) => {
-        setFormData(record);
+        if (cancelled) return undefined;
+        const blank = emptyFormData();
+        setFormData({
+          ...blank,
+          ...record,
+          applicant: { ...blank.applicant, ...record.applicant },
+          owner: { ...blank.owner, ...record.owner },
+          buildingContractor: { ...blank.buildingContractor, ...record.buildingContractor },
+          worksComplyWith: { ...blank.worksComplyWith, ...record.worksComplyWith },
+          checklist: {
+            electrical: { ...blank.checklist.electrical, ...record.checklist?.electrical },
+            hydraulics: {
+              domesticWater: {
+                ...blank.checklist.hydraulics.domesticWater,
+                ...record.checklist?.hydraulics?.domesticWater,
+              },
+              recycledWater: {
+                ...blank.checklist.hydraulics.recycledWater,
+                ...record.checklist?.hydraulics?.recycledWater,
+              },
+              sewerage: { ...blank.checklist.hydraulics.sewerage, ...record.checklist?.hydraulics?.sewerage },
+              fireWater: { ...blank.checklist.hydraulics.fireWater, ...record.checklist?.hydraulics?.fireWater },
+              backflowPreventionConfirmed: record.checklist?.hydraulics?.backflowPreventionConfirmed,
+            },
+            security: { ...blank.checklist.security, ...record.checklist?.security },
+          },
+        });
         setBaNumber(record.baNumber);
+        setRecordId(record.id || id);
         return undefined;
       })
-      .catch((err: unknown) => setError(getErrorMessage(err)))
-      .finally(() => setLoading(false));
+      .catch((err: unknown) => {
+        if (!cancelled) setError(getErrorMessage(err));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [client, initialRecordId, mode]);
 
   /**
@@ -145,16 +189,29 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
    * component state and is the single source of truth for whether this is a create or an update — never
    * re-derive it from the step or re-create on every save.
    */
-  const persist = async (status?: ApplicationStatus): Promise<string> => {
-    const payload = status !== undefined ? { ...formData, status } : formData;
+  const persist = async (status?: ApplicationStatus, baNumberOverride?: string): Promise<string> => {
+    const payload =
+      status !== undefined
+        ? { ...formData, status, ...(baNumberOverride ? { baNumber: baNumberOverride } : {}) }
+        : formData;
+    // Re-read from the page at save time — resourceOverride / early updateView can leave the prop empty
+    // even when #aal-portal-contact-id already has the signed-in contact GUID.
+    const portalUserId = resolvePortalContactId(contactId);
     if (recordId) {
-      await client.update(recordId, payload);
+      // Always re-bind Portal User on update so rows created before the Power Pages lookup fix get tagged.
+      await client.update(recordId, {
+        ...payload,
+        ...(portalUserId ? { portalUserId } : {}),
+      });
       return recordId;
+    }
+    if (!portalUserId) {
+      throw new Error(MISSING_CONTACT_ID_MESSAGE);
     }
     const newId = await client.create({
       ...payload,
       status: status ?? ApplicationStatus.Draft,
-      portalUserId: contactId,
+      portalUserId,
       requestDate: todayDateOnly(),
     });
     setRecordId(newId);
@@ -192,7 +249,23 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
     setSaving(true);
     setError(undefined);
     try {
-      await persist(ApplicationStatus.Submitted);
+      // Existing draft: assign BA in the same update as status. Brand-new submit: create first,
+      // then PATCH BA — suffix is derived from the new GUID.
+      const existingBa = baNumber?.trim();
+      if (recordId && !existingBa) {
+        const generated = generateBaNumber(recordId);
+        await persist(ApplicationStatus.Submitted, generated);
+        setBaNumber(generated);
+      } else if (recordId) {
+        await persist(ApplicationStatus.Submitted);
+      } else {
+        const newId = await persist(ApplicationStatus.Submitted);
+        if (!existingBa) {
+          const generated = generateBaNumber(newId);
+          await client.update(newId, { baNumber: generated });
+          setBaNumber(generated);
+        }
+      }
       onSaved({ draft: false });
     } catch (err) {
       setError(getErrorMessage(err));
@@ -202,20 +275,23 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
 
   if (loading) {
     return (
-      <div className={styles.root}>
+      <div className={mergeClasses(styles.root, "aal-ba-shell")}>
         <Spinner label="Loading application..." />
       </div>
     );
   }
 
-  const title = mode === "new" ? "New application" : "Continue your application";
+  const title =
+    mode === "new" ? "New application" : mode === "view" ? "View application" : "Continue your application";
   const blurb =
     mode === "new"
       ? "Complete the steps below. Your draft is saved against this submission — finish the remaining steps when you are ready."
-      : "Pick up where you left off. Your draft is saved against this submission — finish the remaining steps when you are ready.";
+      : mode === "view"
+        ? "Review the details of this submission below."
+        : "Pick up where you left off. Your draft is saved against this submission — finish the remaining steps when you are ready.";
 
   return (
-    <div className={styles.root}>
+    <div className={mergeClasses(styles.root, "aal-ba-shell")}>
       <div className={styles.pageHeader}>
         <Link className={styles.breadcrumb} onClick={onCancel}>
           ← All Submissions
@@ -223,15 +299,17 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
         <p className={styles.eyebrow}>Building Approvals</p>
         <h1 className={styles.title}>{title}</h1>
         <p className={styles.blurb}>{blurb}</p>
-        <p className={styles.tip}>
-          Tip: Use <span className={styles.tipStrong}>Next</span> to continue. Use{" "}
-          <span className={styles.tipStrong}>Save Draft</span> to save progress and leave. Use{" "}
-          <span className={styles.tipStrong}>Cancel</span> to leave without saving this step. On the last step, use{" "}
-          <span className={styles.tipStrong}>Submit</span> to send your application.
-        </p>
+        {!readOnly && (
+          <p className={styles.tip}>
+            Tip: Use <span className={styles.tipStrong}>Next</span> to continue. Use{" "}
+            <span className={styles.tipStrong}>Save Draft</span> to save progress and leave. Use{" "}
+            <span className={styles.tipStrong}>Cancel</span> to leave without saving this step. On the last step, use{" "}
+            <span className={styles.tipStrong}>Submit</span> to send your application.
+          </p>
+        )}
       </div>
 
-      <WizardStepper current={step} labels={STEP_LABELS} onSelect={setStep} />
+      {!readOnly && <WizardStepper current={step} labels={STEP_LABELS} onSelect={setStep} />}
 
       {error && (
         <MessageBar intent="error" style={{ margin: "12px 0" }}>
@@ -239,38 +317,46 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
         </MessageBar>
       )}
 
-      <div className={styles.formPanel}>
-        {step === 1 && <StepApplicantAndActivity formData={formData} onChange={setFormData} readOnly={readOnly} />}
-        {step === 2 && <StepFeeAndChecklist formData={formData} onChange={setFormData} readOnly={readOnly} />}
-        {step === 3 && <StepReview baNumber={baNumber} />}
-      </div>
+      {readOnly ? (
+        <div className={styles.allSteps}>
+          <StepApplicantAndActivity formData={formData} onChange={setFormData} readOnly />
+          <StepFeeAndChecklist formData={formData} onChange={setFormData} readOnly />
+          <StepReview baNumber={baNumber} />
+        </div>
+      ) : (
+        <>
+          {step === 1 && <StepApplicantAndActivity formData={formData} onChange={setFormData} readOnly={false} />}
+          {step === 2 && <StepFeeAndChecklist formData={formData} onChange={setFormData} readOnly={false} />}
+          {step === 3 && <StepReview baNumber={baNumber} />}
+        </>
+      )}
 
       <div className={styles.footer}>
         <HeroButton onClick={onCancel} disabled={saving}>
-          Cancel
+          {readOnly ? "Back" : "Cancel"}
         </HeroButton>
-        <div className={styles.footerActions}>
-          {step > 1 && (
-            <HeroButton onClick={handlePrev} disabled={saving}>
-              Prev
-            </HeroButton>
-          )}
-          {!readOnly && step < STEP_LABELS.length && (
-            <HeroButton onClick={() => void handleNext()} disabled={saving}>
-              Next
-            </HeroButton>
-          )}
-          {!readOnly && step === STEP_LABELS.length && (
-            <HeroButton onClick={() => void handleSubmit()} disabled={saving}>
-              Submit
-            </HeroButton>
-          )}
-          {!readOnly && (
+        {!readOnly && (
+          <div className={styles.footerActions}>
+            {step > 1 && (
+              <HeroButton onClick={handlePrev} disabled={saving}>
+                Prev
+              </HeroButton>
+            )}
+            {step < STEP_LABELS.length && (
+              <HeroButton onClick={() => void handleNext()} disabled={saving}>
+                Next
+              </HeroButton>
+            )}
+            {step === STEP_LABELS.length && (
+              <HeroButton onClick={() => void handleSubmit()} disabled={saving}>
+                Submit
+              </HeroButton>
+            )}
             <HeroButton onClick={() => void handleSaveDraft()} disabled={saving}>
               Save Draft
             </HeroButton>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

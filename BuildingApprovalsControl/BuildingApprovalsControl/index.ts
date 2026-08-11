@@ -1,10 +1,13 @@
 import { IInputs, IOutputs } from "./generated/ManifestTypes";
 import * as React from "react";
 import { BuildingApprovalsApp } from "./components/BuildingApprovalsApp";
+import { ensurePortalChromeHidden } from "./portalChromeHide";
 import { resolvePortalContactId } from "./services/portalContactId";
 import { WebApiClient } from "./services/WebApiClient";
 
 export class BuildingApprovalsControl implements ComponentFramework.ReactControl<IInputs, IOutputs> {
+    private client: WebApiClient | undefined;
+
     /**
      * Empty constructor.
      */
@@ -17,20 +20,24 @@ export class BuildingApprovalsControl implements ComponentFramework.ReactControl
         notifyOutputChanged: () => void,
         state: ComponentFramework.Dictionary
     ): void {
-        // No-op: this control does its own CRUD via the Dataverse client rather than reading
-        // context.parameters — see updateView.
+        // Hide "PCF Anchor" / Basic Form Submit as early as the control lifecycle allows.
+        // (Also runs at module import — this covers harness / late init cases.)
+        ensurePortalChromeHidden();
+        // Stable client instance — recreating on every updateView re-fired the wizard load effect
+        // (context value identity change) and could leave the form empty after open.
+        this.client = new WebApiClient(context.webAPI);
     }
 
     public updateView(context: ComponentFramework.Context<IInputs>): React.ReactElement {
         // TODO (docs/open-questions.md item 1): confirm context.webAPI actually works for this control
         // when hosted inside Power Pages (as opposed to a model-driven app) — if it doesn't, swap this
         // for a PortalRestClient(siteBaseUrl) instance instead. Keep the swap isolated to this one line.
-        const client = new WebApiClient(context.webAPI);
+        this.client ??= new WebApiClient(context.webAPI);
 
         // Power Pages often leaves userSettings.userId empty — prefer Liquid-rendered #aal-portal-contact-id.
         const contactId = resolvePortalContactId(context.userSettings?.userId);
 
-        return React.createElement(BuildingApprovalsApp, { client, contactId });
+        return React.createElement(BuildingApprovalsApp, { client: this.client, contactId });
     }
 
     public getOutputs(): IOutputs {

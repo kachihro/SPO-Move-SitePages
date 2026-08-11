@@ -15,13 +15,50 @@ function toDateOnly(value?: string): string | undefined {
   return value.slice(0, 10);
 }
 
-function normalizeGuid(id: string): string {
-  return id.replace(/[{}]/g, "");
+export function normalizeGuid(id: string): string {
+  return id.replace(/[{}]/g, "").trim();
+}
+
+/**
+ * Lookup payloads for cr137_portaluser → contact.
+ *
+ * - powerPages: Power Pages' PCF webAPI polyfill strips keys containing `@odata.bind` before
+ *   createRecord/updateRecord. Use `_logicalname_value: /logicalname(guid)` instead (entity
+ *   logical name, not entity-set plural).
+ * - odata: Standard Web API / PortalRestClient `/_api/` bind using the navigation property
+ *   (ReferencingEntityNavigationPropertyName = cr137_PortalUser).
+ */
+export function portalUserLookupPayloads(portalUserId: string): {
+  /** Preferred for PCF context.webAPI under Power Pages (polyfill strips @odata.bind). */
+  powerPages: Record<string, string>;
+  /** Alternate Power Pages shape some polyfills accept. */
+  powerPagesBare: Record<string, string>;
+  /** Standard OData for PortalRestClient /_api/. */
+  odata: Record<string, string>;
+} {
+  const id = normalizeGuid(portalUserId);
+  return {
+    powerPages: { _cr137_portaluser_value: `/contact(${id})` },
+    powerPagesBare: { _cr137_portaluser_value: id },
+    odata: { "cr137_PortalUser@odata.bind": `/contacts(${id})` },
+  };
+}
+
+/** Prefer the PK column; fall back to GUID in @odata.id when Power Pages omits the PK field. */
+export function entityPrimaryKey(entity: BuildingApprovalEntity): string {
+  const direct = normalizeGuid(entity[BUILDING_APPROVAL_ID_FIELD] ?? "");
+  if (direct) return direct;
+  const odataId = (entity as BuildingApprovalEntity & { "@odata.id"?: string })["@odata.id"];
+  if (typeof odataId === "string") {
+    const match = /\(([0-9a-fA-F-]{36})\)/.exec(odataId);
+    if (match) return normalizeGuid(match[1]);
+  }
+  return "";
 }
 
 export function mapToRecord(entity: BuildingApprovalEntity): BuildingApprovalRecord {
   return {
-    id: entity[BUILDING_APPROVAL_ID_FIELD] ?? "",
+    id: entityPrimaryKey(entity),
     baNumber: entity.cr137_buildingactivitynumber,
     status: entity.cr137_applicationstatus ?? ApplicationStatus.Draft,
     requestDate: toDateOnly(entity.cr137_applicationdate),
@@ -109,10 +146,10 @@ export function mapToRecord(entity: BuildingApprovalEntity): BuildingApprovalRec
 export function mapFromRecord(data: Partial<BuildingApprovalRecord>): Record<string, unknown> {
   const payload: Record<string, unknown> = {};
   if (data.status !== undefined) payload.cr137_applicationstatus = data.status;
+  if (data.baNumber !== undefined) payload.cr137_buildingactivitynumber = data.baNumber;
   if (data.requestDate !== undefined) payload.cr137_applicationdate = toDateOnly(data.requestDate);
-  if (data.portalUserId) {
-    payload["cr137_portaluser@odata.bind"] = `/contacts(${normalizeGuid(data.portalUserId)})`;
-  }
+  // portalUserId is applied by each client — Power Pages webAPI strips @odata.bind keys, while
+  // raw Portal /_api/ needs the navigation-property bind. See portalUserLookupPayloads().
   if (data.applicant) {
     if (data.applicant.name !== undefined) payload.cr137_applicantname = data.applicant.name;
     if (data.applicant.postalAddress !== undefined) payload.cr137_applicantpostaladdress = data.applicant.postalAddress;

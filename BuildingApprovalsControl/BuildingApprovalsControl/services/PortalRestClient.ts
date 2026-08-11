@@ -1,6 +1,12 @@
 import { DataverseClient } from "./DataverseClient";
-import { BUILDING_APPROVAL_ENTITY_SET, BuildingApprovalEntity, BuildingApprovalRecord } from "../types/BuildingApproval";
-import { mapFromRecord, mapToRecord } from "./mapping";
+import {
+  BUILDING_APPROVAL_ENTITY_SET,
+  BUILDING_APPROVAL_GRID_SELECT,
+  BUILDING_APPROVAL_WEBAPI_SELECT,
+  BuildingApprovalEntity,
+  BuildingApprovalRecord,
+} from "../types/BuildingApproval";
+import { mapFromRecord, mapToRecord, normalizeGuid, portalUserLookupPayloads } from "./mapping";
 
 interface ODataListResponse {
   value: BuildingApprovalEntity[];
@@ -26,34 +32,55 @@ export class PortalRestClient implements DataverseClient {
   constructor(private readonly siteBaseUrl: string) {}
 
   public async retrieveMultiple(contactId: string): Promise<BuildingApprovalRecord[]> {
-    const query = `?$filter=_cr137_portaluser_value eq ${contactId}&$orderby=cr137_applicationdate desc`;
+    const query = `?$select=${BUILDING_APPROVAL_GRID_SELECT}&$orderby=cr137_applicationdate desc`;
     const res = await this.request("GET", `${BUILDING_APPROVAL_ENTITY_SET}${query}`);
     const json = (await res.json()) as ODataListResponse;
-    return (json.value ?? []).map(mapToRecord);
+    const records = (json.value ?? []).map(mapToRecord);
+    const normalized = normalizeGuid(contactId).toLowerCase();
+    return records.filter((r) => normalizeGuid(r.portalUserId ?? "").toLowerCase() === normalized);
   }
 
   public async retrieve(id: string): Promise<BuildingApprovalRecord> {
-    const res = await this.request("GET", `${BUILDING_APPROVAL_ENTITY_SET}(${id})`);
+    const normalizedId = normalizeGuid(id);
+    const res = await this.request(
+      "GET",
+      `${BUILDING_APPROVAL_ENTITY_SET}(${normalizedId})?$select=${BUILDING_APPROVAL_WEBAPI_SELECT}`
+    );
     const json = (await res.json()) as BuildingApprovalEntity;
     return mapToRecord(json);
   }
 
   public async create(data: Partial<BuildingApprovalRecord>): Promise<string> {
-    const res = await this.request("POST", BUILDING_APPROVAL_ENTITY_SET, mapFromRecord(data));
+    if (!data.portalUserId) {
+      throw new Error(
+        'Cannot create Building Activity Application without Portal User (contact). Add <input type="hidden" id="aal-portal-contact-id" value="{{ user.id }}" /> on the Submissions page.'
+      );
+    }
+    const { odata } = portalUserLookupPayloads(data.portalUserId);
+    const res = await this.request("POST", BUILDING_APPROVAL_ENTITY_SET, {
+      ...mapFromRecord(data),
+      ...odata,
+    });
     const location = res.headers.get("OData-EntityId") ?? "";
     const match = /\(([0-9a-fA-F-]+)\)/.exec(location);
     if (!match) {
       throw new Error("Portal REST create did not return an OData-EntityId header with a record id.");
     }
-    return match[1];
+    const id = normalizeGuid(match[1]);
+    await this.request("PATCH", `${BUILDING_APPROVAL_ENTITY_SET}(${id})`, odata);
+    return id;
   }
 
   public async update(id: string, data: Partial<BuildingApprovalRecord>): Promise<void> {
-    await this.request("PATCH", `${BUILDING_APPROVAL_ENTITY_SET}(${id})`, mapFromRecord(data));
+    const payload = mapFromRecord(data);
+    if (data.portalUserId) {
+      Object.assign(payload, portalUserLookupPayloads(data.portalUserId).odata);
+    }
+    await this.request("PATCH", `${BUILDING_APPROVAL_ENTITY_SET}(${normalizeGuid(id)})`, payload);
   }
 
   public async deleteRecord(id: string): Promise<void> {
-    await this.request("DELETE", `${BUILDING_APPROVAL_ENTITY_SET}(${id})`);
+    await this.request("DELETE", `${BUILDING_APPROVAL_ENTITY_SET}(${normalizeGuid(id)})`);
   }
 
   private async getToken(): Promise<string | undefined> {

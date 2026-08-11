@@ -6,11 +6,11 @@ export interface StepReviewProps {
 }
 
 /**
- * Step 3 per the confirmed live screenshot is just a read-only BA Number display — the record's
- * autonumber isn't assigned until create, so this shows "(assigned on save)" until a recordId exists.
+ * Step 3 per the confirmed live screenshot is just a read-only BA Number display — the BA number
+ * is assigned on submit, so this shows "(assigned on submit)" until then.
  */
 export const StepReview: React.FC<StepReviewProps> = ({ baNumber }) => (
   <Field label="BA Number">
-    <Input value={baNumber ?? "(assigned on save)"} readOnly />
+    <Input value={baNumber ?? "(assigned on submit)"} readOnly />
   </Field>
 );

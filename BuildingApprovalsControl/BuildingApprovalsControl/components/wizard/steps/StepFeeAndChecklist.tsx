@@ -78,7 +78,7 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
             onChange={(v) => update((f) => (f.checklist.electrical.supplyApplicationRequired = v))}
           />
           {electrical.supplyApplicationRequired && (
-            <div style={{ background: "#fff9c4", padding: "12px", borderRadius: "4px" }}>
+            <>
               <YesNoField
                 label="Meter provided"
                 value={electrical.meterProvided}
@@ -108,7 +108,7 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
                   onChange={(_, d) => update((f) => (f.checklist.electrical.maximumDemandAndSupplyDetails = d.value))}
                 />
               </Field>
-            </div>
+            </>
           )}
         </div>
 

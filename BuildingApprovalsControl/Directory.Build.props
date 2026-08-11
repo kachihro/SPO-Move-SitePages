@@ -1,0 +1,6 @@
+<Project>
+  <!-- Required for pac pcf push temp cdsproj restore under newer VS/NuGet. -->
+  <PropertyGroup>
+    <RuntimeIdentifier>win</RuntimeIdentifier>
+  </PropertyGroup>
+</Project>

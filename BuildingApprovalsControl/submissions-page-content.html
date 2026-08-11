@@ -1,0 +1,1486 @@
+<style>
+  .aal-submissions {
+    --ink: #1b1b29;
+    --paper: #f5f5f2;
+    --paper-2: #efefeb;
+    --coral: #e9603f;
+    --grape: #66247f;
+    --magenta: #c81e7c;
+    --slate: #5c5e6b;
+    --slate-2: #8a8c97;
+    --line: #e2e1dc;
+    --card: #ffffff;
+    --success: #2e7d4f;
+    --warning: #b86e00;
+    --danger: #b42318;
+    --info: #1f4b99;
+    --gradient: linear-gradient(135deg, var(--coral) 0%, var(--magenta) 52%, var(--grape) 100%);
+    --shadow-soft: 0 1px 2px rgba(27, 27, 41, 0.04), 0 8px 24px rgba(27, 27, 41, 0.06);
+    box-sizing: border-box;
+    max-width: 1288px;
+    margin: 0 auto;
+    padding: 32px 32px 64px;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .aal-submissions *,
+  .aal-submissions *::before,
+  .aal-submissions *::after {
+    box-sizing: border-box;
+  }
+
+  .aal-submissions .hero {
+    max-width: 720px;
+    margin-bottom: 40px;
+  }
+
+  .aal-submissions .eyebrow {
+    margin: 0 0 16px;
+    color: var(--grape);
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .aal-submissions .hero h1 {
+    margin: 0 0 16px;
+    color: var(--ink);
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 44px;
+    font-weight: 700;
+    line-height: 1.12;
+    letter-spacing: -0.01em;
+  }
+
+  .aal-submissions .lede {
+    max-width: 560px;
+    margin: 0;
+    color: var(--slate);
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.55;
+  }
+
+  .aal-submissions .submissions-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 20px;
+    min-height: 44px;
+  }
+
+  .aal-submissions .submissions-shell {
+    border-radius: 18px;
+  }
+
+  html body .aal-submissions .entitylist,
+  html body .aal-submissions .entity-grid.entitylist,
+  html body .aal-submissions .entity-grid {
+    border: 1px solid var(--line) !important;
+    border-radius: 18px !important;
+    overflow: hidden;
+    background: var(--card) !important;
+    color: var(--ink) !important;
+    box-shadow: var(--shadow-soft);
+  }
+
+  /* Only our static Create — hide every portal list Create / toolbar */
+  html body .aal-submissions .entitylist .view-toolbar,
+  html body .aal-submissions .entitylist .grid-actions,
+  html body .aal-submissions .entity-grid .view-toolbar,
+  html body .aal-submissions .entity-grid .grid-actions,
+  html body .aal-submissions .entitylist a.create-action,
+  html body .aal-submissions .entitylist a.create-btn,
+  html body .aal-submissions .entitylist .create-action,
+  html body .aal-submissions .entitylist .create-btn,
+  html body .aal-submissions .entity-grid a.create-action,
+  html body .aal-submissions .entity-grid a.create-btn,
+  html body .aal-submissions .submissions-toolbar .view-toolbar,
+  html body .aal-submissions .submissions-toolbar .grid-actions,
+  html body .aal-submissions .submissions-toolbar a.create-action,
+  html body .aal-submissions .submissions-toolbar a.create-btn,
+  html body .aal-submissions .submissions-toolbar a.btn-primary:not(.aal-create),
+  html body .aal-submissions .submissions-toolbar .btn-primary:not(.aal-create),
+  html body .aal-submissions .submissions-toolbar a.aal-create-fallback {
+    display: none !important;
+  }
+
+  /* Hide portal row actions — open via left Application link instead */
+  html body .aal-submissions a.details-link,
+  html body .aal-submissions a.edit-link,
+  html body .aal-submissions a.delete-link,
+  html body .aal-submissions .entity-grid a.details-link,
+  html body .aal-submissions .entity-grid a.edit-link,
+  html body .aal-submissions td:has(> a.details-link),
+  html body .aal-submissions td:has(> a.edit-link),
+  html body .aal-submissions td:has(a.details-link),
+  html body .aal-submissions td:has(a.edit-link),
+  html body .aal-submissions th:empty,
+  html body .aal-submissions .aal-action-col,
+  html body .aal-submissions col.aal-action-col {
+    display: none !important;
+    width: 0 !important;
+    max-width: 0 !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
+  }
+
+  html body .aal-submissions .submissions-toolbar a.aal-create {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    border: 0 !important;
+    border-radius: 999px !important;
+    border-color: transparent !important;
+    background-color: var(--magenta) !important;
+    background-image: var(--gradient) !important;
+    color: #fff !important;
+    padding: 11px 22px !important;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    letter-spacing: 0.01em !important;
+    line-height: 1.2 !important;
+    text-decoration: none !important;
+    box-shadow: 0 8px 18px rgba(102, 36, 127, 0.18) !important;
+    cursor: pointer !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  }
+
+  html body .aal-submissions .submissions-toolbar a.aal-create:hover {
+    border: 0 !important;
+    background-color: var(--magenta) !important;
+    background-image: var(--gradient) !important;
+    color: #fff !important;
+    box-shadow: 0 12px 24px rgba(102, 36, 127, 0.24) !important;
+    filter: saturate(1.06) brightness(0.98);
+    transform: translateY(-1px);
+    text-decoration: none !important;
+    cursor: pointer !important;
+  }
+
+  .aal-submissions .view-grid,
+  .aal-submissions .entity-grid .view-grid {
+    overflow: hidden;
+    overflow-x: hidden;
+  }
+
+  .aal-submissions .view-grid table,
+  .aal-submissions .entitylist table.table {
+    width: 100% !important;
+    table-layout: fixed;
+    margin-bottom: 0 !important;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  /* Soft header — beat theme a:not(.btn) underline + bootstrap .info greys */
+  html body .aal-submissions .view-grid table > thead > tr > th,
+  html body .aal-submissions .view-grid table > thead > tr.info > th,
+  html body .aal-submissions .view-grid table > thead > tr > th.info,
+  html body .aal-submissions .entitylist table > thead > tr > th,
+  html body .aal-submissions .entitylist table > thead > tr.info > th,
+  html body .aal-submissions .entitylist table > thead > tr > th.info,
+  html body .aal-submissions .table > thead > tr.info > th,
+  html body .aal-submissions .table > thead > tr > th.info,
+  html body .aal-submissions table.table > thead > tr > th {
+    padding: 12px 18px !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--line) !important;
+    background: var(--paper-2) !important;
+    background-color: var(--paper-2) !important;
+    color: var(--slate) !important;
+    vertical-align: middle;
+  }
+
+  html body .aal-submissions .view-grid table > thead > tr > th > a,
+  html body .aal-submissions .view-grid table > thead > tr > th > a:link,
+  html body .aal-submissions .view-grid table > thead > tr > th > a:visited,
+  html body .aal-submissions .view-grid table > thead > tr > th > a:hover,
+  html body .aal-submissions .view-grid table > thead > tr > th > a:focus,
+  html body .aal-submissions .entitylist table > thead > tr > th > a,
+  html body .aal-submissions .entitylist table > thead > tr > th > a:link,
+  html body .aal-submissions .entitylist table > thead > tr > th > a:visited,
+  html body .aal-submissions .entitylist table > thead > tr > th > a:hover,
+  html body .aal-submissions .entitylist table > thead > tr > th > a:focus,
+  html body .aal-submissions table.table > thead > tr > th > a,
+  html body .aal-submissions table.table > thead > tr > th > a:not(.btn),
+  html body .aal-submissions .view-grid table > thead a:not(.btn) {
+    color: var(--slate) !important;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.04em !important;
+    text-decoration: none !important;
+    text-transform: uppercase !important;
+  }
+
+  .aal-submissions .view-grid table > tbody > tr > td,
+  .aal-submissions .entitylist table > tbody > tr > td {
+    padding: 16px 18px !important;
+    border-color: var(--line) !important;
+    border-top: 0 !important;
+    color: var(--ink);
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.4;
+    vertical-align: middle;
+    background: transparent;
+  }
+
+  html body .aal-submissions .view-empty.message,
+  html body .aal-submissions .view-empty,
+  html body .aal-submissions .entitylist .view-empty,
+  html body .aal-submissions .entity-grid .view-empty,
+  html body .aal-submissions .view-grid .view-empty,
+  html body .aal-submissions .entitylist .message.view-empty,
+  html body .aal-submissions td.view-empty {
+    padding: 28px 24px !important;
+    color: var(--slate) !important;
+    font-size: 15px !important;
+    line-height: 1.5 !important;
+  }
+
+  html body .aal-submissions .table-striped > tbody > tr:nth-of-type(odd),
+  html body .aal-submissions .table-striped > tbody > tr:nth-of-type(odd) > td {
+    background-color: #fff !important;
+  }
+
+  html body .aal-submissions .table-striped > tbody > tr:nth-of-type(even),
+  html body .aal-submissions .table-striped > tbody > tr:nth-of-type(even) > td {
+    background-color: var(--paper) !important;
+  }
+
+  html body .aal-submissions .table-hover > tbody > tr:hover,
+  html body .aal-submissions .table-hover > tbody > tr:hover > td,
+  html body .aal-submissions .table-striped > tbody > tr:hover,
+  html body .aal-submissions .table-striped > tbody > tr:hover > td {
+    background-color: #f9f6fb !important;
+  }
+
+  /* Status pills — New / Draft / Active / Submitted / Processing / Approved / Denied */
+  .aal-submissions .aal-status-pill {
+    display: inline-flex;
+    align-items: center;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 4px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+    color: var(--info);
+    background: rgba(31, 75, 153, 0.1);
+  }
+
+  .aal-submissions .aal-status-pill.is-muted {
+    color: var(--slate);
+    background: rgba(92, 94, 107, 0.1);
+  }
+
+  .aal-submissions .aal-status-pill.is-submitted,
+  .aal-submissions .aal-status-pill.is-processing {
+    color: var(--warning);
+    background: rgba(184, 110, 0, 0.12);
+  }
+
+  .aal-submissions .aal-status-pill.is-approved {
+    color: var(--success);
+    background: rgba(46, 125, 79, 0.1);
+  }
+
+  .aal-submissions .aal-status-pill.is-denied {
+    color: var(--danger);
+    background: rgba(180, 35, 24, 0.1);
+  }
+
+  /* Left open-link column → Application-BA (BA Number) */
+  html body .aal-submissions th.aal-open-col,
+  html body .aal-submissions td.aal-open-col {
+    width: 18% !important;
+    max-width: 220px;
+    white-space: nowrap;
+  }
+
+  /* Hide native BA Number column when we inject our linked column */
+  html body .aal-submissions th.aal-native-ba-col,
+  html body .aal-submissions td.aal-native-ba-col,
+  html body .aal-submissions col.aal-native-ba-col {
+    display: none !important;
+    width: 0 !important;
+    max-width: 0 !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
+  }
+
+  html body .aal-submissions a.aal-ba-link,
+  html body .aal-submissions a.aal-ba-link:link,
+  html body .aal-submissions a.aal-ba-link:visited {
+    color: var(--grape) !important;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0;
+    text-decoration: none !important;
+    border-bottom: 1.5px solid rgba(102, 36, 127, 0.28);
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+
+  html body .aal-submissions a.aal-ba-link:hover,
+  html body .aal-submissions a.aal-ba-link:focus {
+    color: var(--magenta) !important;
+    border-bottom-color: var(--magenta);
+    text-decoration: none !important;
+  }
+
+  html body .aal-submissions a.aal-ba-link.is-pending {
+    color: var(--slate) !important;
+    font-style: normal;
+    border-bottom-style: solid;
+    border-bottom-color: rgba(92, 94, 107, 0.35);
+  }
+
+  html body .aal-submissions a.aal-ba-link.is-pending:hover,
+  html body .aal-submissions a.aal-ba-link.is-pending:focus {
+    color: var(--grape) !important;
+    border-bottom-color: var(--grape);
+  }
+
+  .aal-submissions .aal-toast {
+    display: none;
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: rgba(46, 125, 79, 0.1);
+    color: var(--success);
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .aal-submissions .aal-toast.is-visible {
+    display: block;
+  }
+
+  @media (max-width: 991px) {
+    .aal-submissions {
+      padding: 24px 20px 48px;
+    }
+
+    .aal-submissions .hero h1 {
+      font-size: 32px;
+    }
+  }
+</style>
+
+<input type="hidden" id="aal-portal-contact-id" value="{% if user %}{{ user.id }}{% endif %}" />
+<script>
+  (function () {
+    try {
+      var el = document.getElementById("aal-portal-contact-id");
+      var raw = el && el.value ? String(el.value).replace(/[{}]/g, "").trim() : "";
+      if (/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(raw)) {
+        window.__aalPortalContactId = raw;
+        sessionStorage.setItem("aal-portal-contact-id", raw);
+      }
+    } catch (e) {}
+  })();
+</script>
+
+{% if user %}
+{% fetchxml aal_ba_apps %}
+<fetch top="50">
+  <entity name="cr137_buildingactivityapplication">
+    <attribute name="cr137_buildingactivityapplicationid" />
+    <attribute name="cr137_buildingactivitynumber" />
+    <attribute name="cr137_applicationstatus" />
+    <attribute name="createdon" />
+    <order attribute="createdon" descending="true" />
+    <filter type="and">
+      <condition attribute="cr137_portaluser" operator="eq" value="{{ user.id }}" />
+      <condition attribute="statecode" operator="eq" value="0" />
+    </filter>
+  </entity>
+</fetch>
+{% endfetchxml %}
+<script type="application/json" id="aalBaAppsJson">
+[
+{% for e in aal_ba_apps.results.entities %}
+{% assign aal_ba = e.cr137_buildingactivitynumber | default: '' | strip | replace: '"', '' %}
+{% assign aal_st = '' %}
+{% if e.cr137_applicationstatus %}
+  {% assign aal_st = e.cr137_applicationstatus | append: '' | strip | replace: '"', '' %}
+{% endif %}
+  {"id":"{{ e.cr137_buildingactivityapplicationid }}","ba":"{{ aal_ba }}","status":"{{ aal_st }}"}{% unless forloop.last %},{% endunless %}
+{% endfor %}
+]
+</script>
+{% endif %}
+
+<div class="aal-submissions">
+  <section class="hero">
+    <p class="eyebrow">Building approvals</p>
+    <h1>Track and manage your submissions.</h1>
+    <p class="lede">Create a new application, open a draft to continue later, or track submissions that are already in progress.</p>
+  </section>
+
+  <div class="aal-toast" id="aalDraftToast" role="status">Draft saved. You can continue this application anytime from the list below.</div>
+
+  <div class="submissions-toolbar" aria-label="Submission actions">
+    <a class="btn btn-primary aal-create" href="/Application-BA/" role="button">Create</a>
+  </div>
+
+  <section class="submissions-shell">{% include 'entity_list' key: 'Active Building Activity Application' AISummaryTitle: 'AI Insights' isAISummaryExpanded: 'false' AISummaryChartTypes: '[5]' isAISummaryEnabled: 'false' isNLSearchEnabled: 'false' AIInsightsPosition: 'bottom' AISummaryCustomPrompt: '' %}</section>
+</div>
+
+<script>
+  (function () {
+    var root = document.querySelector(".aal-submissions");
+    if (!root) return;
+
+    try {
+      sessionStorage.removeItem("aal-ba-submitted");
+      var toast = document.getElementById("aalDraftToast");
+      if (sessionStorage.getItem("aal-ba-draft-saved") === "1") {
+        sessionStorage.removeItem("aal-ba-draft-saved");
+        if (toast) {
+          toast.textContent = "Draft saved. You can continue this application anytime from the list below.";
+          toast.classList.add("is-visible");
+          setTimeout(function () {
+            toast.classList.remove("is-visible");
+          }, 4500);
+        }
+      }
+    } catch (e) {}
+
+    var toolbarSlot = root.querySelector(".submissions-toolbar");
+    var CREATE_URL = "/Application-BA/";
+
+    function startNewApplication(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+      }
+      try {
+        sessionStorage.removeItem("aal-ba-open-source");
+        sessionStorage.removeItem("aal-ba-force-page1-id");
+        sessionStorage.removeItem("aal-ba-goto-page1");
+        sessionStorage.removeItem("aal-ba-draft-exit");
+        sessionStorage.removeItem("aal-ba-submit-exit");
+        sessionStorage.removeItem("aal-ba-view-mode");
+        sessionStorage.removeItem("aal-ba-just-submitted-id");
+        sessionStorage.removeItem("aal-ba-working-id");
+      } catch (err) {}
+      window.location.href = CREATE_URL;
+    }
+
+    function looksLikeCreateControl(el) {
+      if (!el || el.classList.contains("aal-create")) return false;
+      if (el.classList.contains("aal-ba-link")) return false;
+      if (el.closest && el.closest("td.aal-open-col, th.aal-open-col")) return false;
+      var text = String(el.textContent || el.value || el.getAttribute("aria-label") || "")
+        .trim()
+        .toLowerCase();
+      var href = String(el.getAttribute("href") || "").toLowerCase();
+      if (el.classList.contains("create-action") || el.classList.contains("create-btn")) return true;
+      if (el.classList.contains("aal-create-fallback")) return true;
+      if (/^create$|^new$|create .+|new application/.test(text)) return true;
+      if (href.indexOf("application-ba") !== -1 && href.indexOf("id=") === -1) return true;
+      if (href.indexOf("/submission") !== -1 && href.indexOf("id=") === -1) return true;
+      return false;
+    }
+
+    function dedupeCreateButtons() {
+      root
+        .querySelectorAll(
+          [
+            ".entitylist .view-toolbar",
+            ".entitylist .grid-actions",
+            ".entity-grid .view-toolbar",
+            ".entity-grid .grid-actions",
+            ".submissions-toolbar .view-toolbar",
+            ".submissions-toolbar .grid-actions",
+            "a.create-action",
+            "a.create-btn",
+            "button.create-action",
+            "a.aal-create-fallback",
+            ".submissions-toolbar a.btn-primary",
+            ".submissions-toolbar .btn-primary",
+            ".entitylist a.btn-primary",
+            ".entity-grid a.btn-primary",
+            "a[href*='Application-BA']",
+            "a[href*='Submission']"
+          ].join(", ")
+        )
+        .forEach(function (el) {
+          if (el.classList && el.classList.contains("aal-create")) return;
+          if (el.classList && el.classList.contains("aal-ba-link")) return;
+          if (el.closest && el.closest("a.aal-create, .aal-create, a.aal-ba-link, td.aal-open-col")) {
+            return;
+          }
+          if (
+            el.matches &&
+            (el.matches(".view-toolbar, .grid-actions") || looksLikeCreateControl(el))
+          ) {
+            el.setAttribute("hidden", "hidden");
+            el.style.display = "none";
+            if (el.parentNode && !el.matches(".view-toolbar, .grid-actions")) {
+              try {
+                el.parentNode.removeChild(el);
+              } catch (err) {}
+            }
+          }
+        });
+
+      if (!toolbarSlot) return;
+      Array.prototype.slice.call(toolbarSlot.children).forEach(function (child) {
+        if (child.classList && child.classList.contains("aal-create")) return;
+        child.setAttribute("hidden", "hidden");
+        child.style.display = "none";
+      });
+    }
+
+    function wireCreateButton() {
+      var btn = root.querySelector(".submissions-toolbar a.aal-create");
+      if (!btn) {
+        if (!toolbarSlot) return;
+        btn = document.createElement("a");
+        btn.className = "btn btn-primary aal-create";
+        btn.href = CREATE_URL;
+        btn.textContent = "Create";
+        btn.setAttribute("role", "button");
+        toolbarSlot.appendChild(btn);
+      }
+      if (btn.dataset.aalCreateBound === "1") return;
+      btn.dataset.aalCreateBound = "1";
+      btn.setAttribute("href", CREATE_URL);
+      btn.addEventListener("click", startNewApplication, true);
+    }
+
+    var ENTITY_SET = "cr137_buildingactivityapplications";
+    var BA_NUMBER_FIELD = "cr137_buildingactivitynumber";
+    var STATUS_LOCKED = /^(SUBMITTED|PROCESSING|APPROVED|DENIED)$/;
+    var metaCache = {};
+    var metaInflight = {};
+    var baBackfillInflight = {};
+    var baBackfillDone = {};
+    var seededApps = [];
+
+    function normalizeGuid(raw) {
+      var s = String(raw || "")
+        .replace(/[{}]/g, "")
+        .trim();
+      if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(s)) {
+        return "";
+      }
+      return s.toLowerCase();
+    }
+
+    function idFromHref(href) {
+      if (!href) return "";
+      try {
+        var url = new URL(href, window.location.origin);
+        return normalizeGuid(url.searchParams.get("id"));
+      } catch (err) {
+        var m = String(href).match(/[?&]id=([^&]+)/i);
+        return m ? normalizeGuid(decodeURIComponent(m[1])) : "";
+      }
+    }
+
+    function rowRecordId(row) {
+      if (!row) return "";
+      var direct =
+        normalizeGuid(row.getAttribute("data-id")) ||
+        normalizeGuid(row.getAttribute("data-entityid")) ||
+        normalizeGuid(row.getAttribute("data-record-id")) ||
+        normalizeGuid(row.id && row.id.indexOf("_") === -1 ? row.id : "");
+      if (direct) return direct;
+
+      var links = row.querySelectorAll(
+        "a.details-link, a.edit-link, a[href*='id='], a[href*='Application-BA']"
+      );
+      var i;
+      for (i = 0; i < links.length; i++) {
+        var fromHref = idFromHref(links[i].getAttribute("href") || "");
+        if (fromHref) return fromHref;
+        var fromData =
+          normalizeGuid(links[i].getAttribute("data-id")) ||
+          normalizeGuid(links[i].getAttribute("data-entityid"));
+        if (fromData) return fromData;
+      }
+
+      var box = row.querySelector(
+        'input[type="checkbox"][value], input[type="radio"][value], input[name*="id"][value]'
+      );
+      if (box) {
+        var fromBox = normalizeGuid(box.value);
+        if (fromBox) return fromBox;
+      }
+      return "";
+    }
+
+    function detailUrl(id, readonly) {
+      var qs =
+        "id=" +
+        encodeURIComponent(id) +
+        "&aalsource=grid" +
+        (readonly ? "&aalmode=view" : "");
+      return "/Application-BA/?" + qs;
+    }
+
+    function openSubmission(id, readonly, e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+      }
+      try {
+        sessionStorage.setItem("aal-ba-open-source", "grid");
+        sessionStorage.setItem("aal-ba-force-page1-id", id);
+        sessionStorage.removeItem("aal-ba-goto-page1");
+        if (readonly) {
+          sessionStorage.setItem("aal-ba-view-mode", "1");
+        } else {
+          sessionStorage.removeItem("aal-ba-view-mode");
+        }
+      } catch (err) {}
+      window.location.href = detailUrl(id, readonly);
+    }
+
+    function cleanBaNumber(text) {
+      var s = String(text || "").replace(/\s+/g, " ").trim();
+      if (!s || /\*\*\*|auto-generated|will be/i.test(s)) return "";
+      if (/^draft\b/i.test(s)) return "";
+      if (/^view application$/i.test(s)) return "";
+      if (/^(new|submitted|processing|approved|denied|active|inactive)$/i.test(s)) {
+        return "";
+      }
+      if (/ExtensionData|"Value"\s*:|[{[]/.test(s)) return "";
+      if (/\s/.test(s) && !/^BA-/i.test(s)) return "";
+      return s;
+    }
+
+    function generateBaNumber(forId) {
+      var year = String(new Date().getFullYear());
+      var idSrc = String(forId || "").replace(/[{}-]/g, "");
+      var suffix = "";
+      if (idSrc.length >= 6) {
+        suffix = idSrc.slice(-6).toUpperCase();
+      } else if (
+        typeof crypto !== "undefined" &&
+        typeof crypto.getRandomValues === "function"
+      ) {
+        var bytes = new Uint8Array(3);
+        crypto.getRandomValues(bytes);
+        suffix = Array.prototype.map
+          .call(bytes, function (b) {
+            return ("0" + b.toString(16)).slice(-2);
+          })
+          .join("")
+          .toUpperCase();
+      } else {
+        suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
+      }
+      return "BA-" + year + "-" + suffix;
+    }
+
+    function rowBaNumber(row) {
+      var cell =
+        row.querySelector(
+          'td[data-attribute="' + BA_NUMBER_FIELD + '"]:not(.aal-open-col)'
+        ) || null;
+      if (!cell) {
+        var candidates = row.querySelectorAll('td[data-th="BA Number"]');
+        var i;
+        for (i = 0; i < candidates.length; i++) {
+          if (candidates[i].classList.contains("aal-open-col")) continue;
+          if (candidates[i].querySelector("a.aal-ba-link")) continue;
+          cell = candidates[i];
+          break;
+        }
+      }
+      if (!cell) return "";
+      return cleanBaNumber(cell.textContent);
+    }
+
+    function normalizeLifecycleStatus(text) {
+      var s = String(text || "").replace(/\s+/g, " ").trim();
+      if (!s) return "";
+      if (/ExtensionData|"Value"\s*:|[{[]/.test(s)) {
+        var m = s.match(/^(new|draft|submitted|processing|approved|denied)\b/i);
+        return m ? m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase() : "";
+      }
+      if (/^(active|inactive)$/i.test(s)) return "";
+      if (/^(new|draft|submitted|processing|approved|denied)$/i.test(s)) {
+        return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+      }
+      return s;
+    }
+
+    function rowStatusText(row) {
+      var cell =
+        row.querySelector('td[data-attribute="cr137_applicationstatus"]') ||
+        row.querySelector('td[data-th="Application Status"]');
+      if (!cell) return "";
+      var pill = cell.querySelector(".aal-status-pill");
+      return normalizeLifecycleStatus(
+        (pill && pill.textContent) || cell.textContent || ""
+      );
+    }
+
+    function statecodeCellForRow(row) {
+      if (!row) return null;
+      var byAttr =
+        row.querySelector('td[data-attribute="statecode"]:not(.aal-open-col):not(.aal-native-ba-col)') ||
+        row.querySelector('td[data-attribute="statuscode"]:not(.aal-open-col):not(.aal-native-ba-col)');
+      if (byAttr) return byAttr;
+      var table = row.closest("table");
+      var headRow = table && table.querySelector("thead > tr");
+      if (!headRow) {
+        return row.querySelector('td[data-th="Status"]:not(.aal-open-col)');
+      }
+      var ths = headRow.children;
+      var i;
+      for (i = 0; i < ths.length; i++) {
+        var th = ths[i];
+        if (
+          !th ||
+          th.classList.contains("aal-open-col") ||
+          th.classList.contains("aal-native-ba-col") ||
+          th.classList.contains("aal-action-col")
+        ) {
+          continue;
+        }
+        var heading = (th.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+        var attr = (th.getAttribute("data-attribute") || "").toLowerCase();
+        if (
+          attr === "statecode" ||
+          attr === "statuscode" ||
+          heading === "status"
+        ) {
+          var cell = row.children[i] || null;
+          if (
+            cell &&
+            !cell.classList.contains("aal-open-col") &&
+            !cell.classList.contains("aal-native-ba-col")
+          ) {
+            return cell;
+          }
+        }
+      }
+      return row.querySelector('td[data-th="Status"]:not(.aal-open-col)');
+    }
+
+    function isLockedStatus(text) {
+      return STATUS_LOCKED.test(String(text || "").trim().toUpperCase());
+    }
+
+    function openLinkLabel(row, meta) {
+      var ba = (meta && cleanBaNumber(meta.ba)) || rowBaNumber(row);
+      if (ba) return { text: ba, pending: false, readonly: !!(meta && meta.readonly) };
+      var status = normalizeLifecycleStatus((meta && meta.status) || rowStatusText(row));
+      var locked = isLockedStatus(status) || !!(meta && meta.readonly);
+      if (locked) return { text: "View application", pending: false, readonly: true };
+      return { text: "Draft", pending: true, readonly: false };
+    }
+
+    function bindOpenLink(link, id, readonly) {
+      if (!link) return;
+      link.dataset.aalReadonly = readonly ? "1" : "0";
+      if (link.dataset.aalNavBound === "1") return;
+      link.dataset.aalNavBound = "1";
+      link.addEventListener(
+        "click",
+        function (e) {
+          openSubmission(id, link.dataset.aalReadonly === "1", e);
+        },
+        true
+      );
+    }
+
+    function sanitizeLinkLabel(label) {
+      var next = label || { text: "Draft", pending: true, readonly: false };
+      var text = String(next.text || "").replace(/\s+/g, " ").trim();
+      var ba = cleanBaNumber(text);
+      if (ba) {
+        return { text: ba, pending: false, readonly: !!next.readonly };
+      }
+      if (next.readonly || /^view application$/i.test(text) || isLockedStatus(text)) {
+        return { text: "View application", pending: false, readonly: true };
+      }
+      return { text: "Draft", pending: true, readonly: false };
+    }
+
+    function applyLinkState(link, id, label) {
+      if (!link) return;
+      label = sanitizeLinkLabel(label);
+      var url = detailUrl(id, label.readonly);
+      var aria = label.readonly
+        ? "View submission " + label.text + " (read only)"
+        : label.pending
+          ? "Open draft submission"
+          : "Open submission " + label.text;
+      link.textContent = label.text;
+      var shouldPending = !!label.pending;
+      if (link.classList.contains("is-pending") !== shouldPending) {
+        link.classList.toggle("is-pending", shouldPending);
+      }
+      if (link.getAttribute("href") !== url) link.setAttribute("href", url);
+      if (link.getAttribute("aria-label") !== aria) link.setAttribute("aria-label", aria);
+      bindOpenLink(link, id, label.readonly);
+    }
+
+    function statusLabelFromValue(val) {
+      var n = Number(val);
+      var map = {
+        100000000: "New",
+        100000001: "Draft",
+        100000002: "Submitted",
+        100000003: "Processing",
+        100000004: "Approved",
+        100000005: "Denied",
+        466860000: "Draft",
+        466860001: "Submitted",
+        466860002: "Processing",
+        466860003: "Approved",
+        466860004: "Denied",
+        466860005: "New"
+      };
+      if (map[n]) return map[n];
+      var s = String(val || "").trim();
+      return isLockedStatus(s) || /^(new|draft|submitted|processing|approved|denied)$/i.test(s)
+        ? s
+        : "";
+    }
+
+    function metaIsComplete(meta) {
+      return !!(meta && cleanBaNumber(meta.ba) && normalizeLifecycleStatus(meta.status));
+    }
+
+    function portalApiRequest(method, url, payload, done) {
+      var body = payload ? JSON.stringify(payload) : undefined;
+      if (window.webapi && typeof webapi.safeAjax === "function") {
+        webapi.safeAjax({
+          type: method,
+          contentType: "application/json",
+          url: url,
+          data: body,
+          headers:
+            method === "GET"
+              ? { Prefer: 'odata.include-annotations="*"' }
+              : { Prefer: "return=minimal" },
+          success: function (data) {
+            done({ ok: true, data: data });
+          },
+          error: function (xhr) {
+            done({
+              ok: false,
+              status: xhr && xhr.status,
+              detail: xhr && (xhr.responseText || xhr.statusText)
+            });
+          }
+        });
+        return;
+      }
+
+      var run = function (token) {
+        var headers = {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          __RequestVerificationToken: token || ""
+        };
+        if (method === "GET") {
+          headers.Prefer = 'odata.include-annotations="*"';
+        } else {
+          headers.Prefer = "return=minimal";
+        }
+        fetch(url, {
+          method: method,
+          headers: headers,
+          credentials: "same-origin",
+          body: body
+        })
+          .then(function (res) {
+            if (!res.ok) {
+              return res.text().then(function (text) {
+                done({ ok: false, status: res.status, detail: text });
+              });
+            }
+            if (method === "GET") {
+              return res.json().then(function (data) {
+                done({ ok: true, data: data });
+              });
+            }
+            done({ ok: true, data: null });
+          })
+          .catch(function (err) {
+            done({ ok: false, detail: String(err || "") });
+          });
+      };
+
+      if (window.shell && typeof shell.getTokenDeferred === "function") {
+        shell.getTokenDeferred().then(run).fail(function () {
+          run("");
+        });
+      } else {
+        run("");
+      }
+    }
+
+    function fetchRowMeta(id, done) {
+      if (!id) return;
+      var cached = metaCache[id];
+      if (metaIsComplete(cached)) {
+        done(cached);
+        return;
+      }
+      if (metaInflight[id]) {
+        metaInflight[id].push(done);
+        return;
+      }
+      metaInflight[id] = [done];
+
+      var finish = function (meta) {
+        var prev = metaCache[id] || {};
+        var merged = {
+          ba: cleanBaNumber(meta && meta.ba) || cleanBaNumber(prev.ba) || "",
+          status:
+            normalizeLifecycleStatus(meta && meta.status) ||
+            normalizeLifecycleStatus(prev.status) ||
+            "",
+          readonly: false
+        };
+        merged.readonly = isLockedStatus(merged.status);
+        metaCache[id] = merged;
+        var waiters = metaInflight[id] || [];
+        delete metaInflight[id];
+        waiters.forEach(function (fn) {
+          try {
+            fn(merged);
+          } catch (err) {}
+        });
+      };
+
+      var url =
+        "/_api/" +
+        ENTITY_SET +
+        "(" +
+        id +
+        ")?$select=" +
+        BA_NUMBER_FIELD +
+        ",cr137_applicationstatus";
+
+      portalApiRequest("GET", url, null, function (res) {
+        if (!(res && res.ok) || !res.data) {
+          finish({
+            ba: (cached && cached.ba) || "",
+            status: (cached && cached.status) || "",
+            readonly: !!(cached && cached.readonly)
+          });
+          return;
+        }
+        var data = res.data;
+        var ba = cleanBaNumber(data[BA_NUMBER_FIELD]);
+        var statusRaw = normalizeLifecycleStatus(
+          data["cr137_applicationstatus@OData.Community.Display.V1.FormattedValue"] ||
+            data["james.b@example.com.V1.FormattedValue"] ||
+            ""
+        );
+        if (!statusRaw && data.cr137_applicationstatus != null) {
+          statusRaw = normalizeLifecycleStatus(
+            statusLabelFromValue(data.cr137_applicationstatus)
+          );
+        }
+        finish({
+          ba: ba,
+          status: statusRaw || "",
+          readonly: isLockedStatus(statusRaw)
+        });
+      });
+    }
+
+    function ensureBaOnRecord(id, meta, done) {
+      meta = meta || { ba: "", status: "", readonly: false };
+      var existing = cleanBaNumber(meta.ba);
+      if (existing) {
+        done(meta);
+        return;
+      }
+      if (baBackfillDone[id] && metaCache[id] && cleanBaNumber(metaCache[id].ba)) {
+        done(metaCache[id]);
+        return;
+      }
+
+      var generated = generateBaNumber(id);
+      if (!generated) {
+        done(meta);
+        return;
+      }
+
+      var next = {
+        ba: generated,
+        status: normalizeLifecycleStatus(meta.status) || "Draft",
+        readonly: isLockedStatus(meta.status) || !!meta.readonly
+      };
+      metaCache[id] = next;
+      done(next);
+
+      if (baBackfillInflight[id] || baBackfillDone[id]) return;
+      baBackfillInflight[id] = true;
+
+      var payload = {};
+      payload[BA_NUMBER_FIELD] = generated;
+      portalApiRequest(
+        "PATCH",
+        "/_api/" + ENTITY_SET + "(" + id + ")",
+        payload,
+        function (res) {
+          delete baBackfillInflight[id];
+          if (res && res.ok) {
+            baBackfillDone[id] = true;
+          } else {
+            console.warn("BA number backfill failed", id, res && res.status);
+          }
+        }
+      );
+    }
+
+    function applyRowMeta(row, cell, id, meta) {
+      var live = cell && cell.querySelector("a.aal-ba-link");
+      if (live) applyLinkState(live, id, openLinkLabel(row, meta));
+      setStatusPill(row, normalizeLifecycleStatus(meta && meta.status) || "Draft");
+    }
+
+    function isBaHeading(text) {
+      var heading = String(text || "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
+      if (!heading) return false;
+      return (
+        heading === "ba number" ||
+        heading === "building activity number" ||
+        heading.indexOf("ba number") !== -1
+      );
+    }
+
+    function isNativeBaHeader(th) {
+      if (!th || th.classList.contains("aal-open-col")) return false;
+      var attr = (th.getAttribute("data-attribute") || "").toLowerCase();
+      if (attr === BA_NUMBER_FIELD) return true;
+      return isBaHeading(th.textContent);
+    }
+
+    function isNativeBaCell(td) {
+      if (!td || td.classList.contains("aal-open-col")) return false;
+      if (td.querySelector("a.aal-ba-link")) return false;
+      var attr = (td.getAttribute("data-attribute") || "").toLowerCase();
+      if (attr === BA_NUMBER_FIELD) return true;
+      var dataTh = (td.getAttribute("data-th") || "").replace(/\s+/g, " ").trim();
+      return isBaHeading(dataTh);
+    }
+
+    function hideNativeBaColumns(table) {
+      if (!table) return;
+      var indexes = {};
+      var headRow = table.querySelector("thead > tr");
+      if (headRow) {
+        Array.prototype.forEach.call(headRow.children, function (th, idx) {
+          if (isNativeBaHeader(th)) indexes[idx] = true;
+        });
+      }
+      table.querySelectorAll("tbody > tr > td").forEach(function (td) {
+        if (!isNativeBaCell(td)) return;
+        var row = td.parentElement;
+        var idx = row ? Array.prototype.indexOf.call(row.children, td) : -1;
+        if (idx >= 0) indexes[idx] = true;
+      });
+      Object.keys(indexes).forEach(function (key) {
+        var idx = parseInt(key, 10);
+        if (isNaN(idx) || idx < 0) return;
+        table.querySelectorAll("tr").forEach(function (row) {
+          var cell = row.children[idx];
+          if (!cell || cell.classList.contains("aal-open-col")) return;
+          cell.classList.add("aal-native-ba-col");
+          hideCol(cell, { keepText: true });
+        });
+        var col = table.querySelectorAll("colgroup > col")[idx];
+        if (col) {
+          col.classList.add("aal-native-ba-col");
+          hideCol(col, { keepText: true });
+        }
+      });
+    }
+
+    function ensureOpenColumn(table) {
+      if (!table) return;
+      var headRow = table.querySelector("thead > tr");
+      if (headRow && !headRow.querySelector("th.aal-open-col")) {
+        var th = document.createElement("th");
+        th.className = "aal-open-col";
+        th.setAttribute("scope", "col");
+        var label = document.createElement("a");
+        label.textContent = "BA Number";
+        label.setAttribute("role", "presentation");
+        label.tabIndex = -1;
+        label.href = "#";
+        label.addEventListener("click", function (e) {
+          e.preventDefault();
+        });
+        th.appendChild(label);
+        headRow.insertBefore(th, headRow.firstChild);
+      } else if (headRow) {
+        var existingTh = headRow.querySelector("th.aal-open-col");
+        if (existingTh) {
+          var existingLabel = existingTh.querySelector("a");
+          if (existingLabel && existingLabel.textContent !== "BA Number") {
+            existingLabel.textContent = "BA Number";
+          } else if (!existingLabel && (existingTh.textContent || "").trim() !== "BA Number") {
+            existingTh.textContent = "BA Number";
+          }
+        }
+      }
+
+      var colgroup = table.querySelector("colgroup");
+      if (colgroup && !colgroup.querySelector("col.aal-open-col")) {
+        var col = document.createElement("col");
+        col.className = "aal-open-col";
+        colgroup.insertBefore(col, colgroup.firstChild);
+      }
+    }
+
+    function linkifyOpenColumn() {
+      root.querySelectorAll(".view-grid table, .entitylist table").forEach(ensureOpenColumn);
+
+      var rows = Array.prototype.slice
+        .call(
+          root.querySelectorAll(
+            ".view-grid table > tbody > tr, .entitylist table > tbody > tr"
+          )
+        )
+        .filter(function (row) {
+          return !row.classList.contains("view-empty") && !row.querySelector("td.view-empty");
+        });
+
+      rows.forEach(function (row, index) {
+        var id = rowRecordId(row);
+        if (!id && seededApps[index] && seededApps[index].id) {
+          id = normalizeGuid(seededApps[index].id);
+        }
+        if (!id && seededApps.length === 1 && rows.length === 1) {
+          id = normalizeGuid(seededApps[0].id);
+        }
+        if (id && !row.getAttribute("data-id")) {
+          row.setAttribute("data-id", id);
+        }
+        if (!id) return;
+
+        var cell = row.querySelector("td.aal-open-col");
+        if (!cell) {
+          cell = document.createElement("td");
+          cell.className = "aal-open-col";
+          row.insertBefore(cell, row.firstChild);
+        }
+
+        var cached = metaCache[id];
+        var label = openLinkLabel(row, cached);
+        var existing = cell.querySelector("a.aal-ba-link");
+        if (!existing) {
+          cell.textContent = "";
+          existing = document.createElement("a");
+          existing.className = "aal-ba-link";
+          cell.appendChild(existing);
+        } else if (cell.childNodes.length > 1) {
+          cell.textContent = "";
+          cell.appendChild(existing);
+        }
+        applyLinkState(existing, id, label);
+
+        if (metaIsComplete(cached)) {
+          setStatusPill(row, normalizeLifecycleStatus(cached.status) || "Draft");
+          return;
+        }
+
+        fetchRowMeta(id, function (meta) {
+          if (!cleanBaNumber(meta && meta.ba)) {
+            var fromRow = rowBaNumber(row);
+            if (fromRow) {
+              meta = {
+                ba: fromRow,
+                status: normalizeLifecycleStatus(meta && meta.status) || "",
+                readonly: !!(meta && meta.readonly) || isLockedStatus(meta && meta.status)
+              };
+              metaCache[id] = meta;
+            }
+          }
+          ensureBaOnRecord(id, meta, function (finalMeta) {
+            applyRowMeta(row, cell, id, finalMeta);
+          });
+        });
+      });
+
+      root.querySelectorAll(".view-grid table, .entitylist table").forEach(hideNativeBaColumns);
+    }
+
+    function isActionCell(cell) {
+      if (!cell) return false;
+      if (cell.classList.contains("aal-open-col")) return false;
+      if (cell.classList.contains("aal-action-col")) return true;
+      if (cell.querySelector("a.aal-ba-link")) return false;
+      if (cell.querySelector("a.details-link, a.edit-link, a.delete-link")) return true;
+      var text = (cell.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+      return /view details|^\s*edit\s*$|view details\s*edit/.test(text);
+    }
+
+    function hideCol(el, opts) {
+      if (!el || el.classList.contains("aal-open-col")) return;
+      var keepText = !!(opts && opts.keepText);
+      if (!keepText) el.classList.add("aal-action-col");
+      el.setAttribute("hidden", "hidden");
+      el.style.setProperty("display", "none", "important");
+      el.style.setProperty("width", "0", "important");
+      el.style.setProperty("max-width", "0", "important");
+      el.style.setProperty("padding", "0", "important");
+      el.style.setProperty("border", "0", "important");
+      el.style.setProperty("visibility", "hidden", "important");
+      if (!keepText && (el.tagName === "TD" || el.tagName === "TH")) {
+        el.textContent = "";
+      }
+    }
+
+    function hideColumnAt(table, index, opts) {
+      if (!table || index < 0) return;
+      table.querySelectorAll("tr").forEach(function (row) {
+        var cells = row.children;
+        if (cells[index]) hideCol(cells[index], opts);
+      });
+      var cols = table.querySelectorAll("colgroup > col, col");
+      if (cols[index]) hideCol(cols[index], opts);
+    }
+
+    function stripRowActions() {
+      var actionIndexes = {};
+
+      root.querySelectorAll("a.details-link, a.edit-link, a.delete-link").forEach(function (el) {
+        var cell = el.closest("td, th");
+        if (cell) {
+          var row = cell.parentElement;
+          var idx = row ? Array.prototype.indexOf.call(row.children, cell) : -1;
+          if (idx >= 0) actionIndexes[idx] = true;
+          hideCol(cell);
+        } else {
+          el.setAttribute("hidden", "hidden");
+          el.style.display = "none";
+        }
+      });
+
+      root
+        .querySelectorAll(
+          ".view-grid table > tbody > tr > td, .entitylist table > tbody > tr > td"
+        )
+        .forEach(function (cell) {
+          if (!isActionCell(cell)) return;
+          var row = cell.parentElement;
+          var idx = row ? Array.prototype.indexOf.call(row.children, cell) : -1;
+          if (idx >= 0) actionIndexes[idx] = true;
+          hideCol(cell);
+        });
+
+      root
+        .querySelectorAll(
+          ".view-grid table > thead > tr > th, .entitylist table > thead > tr > th"
+        )
+        .forEach(function (th) {
+          if ((th.textContent || "").trim()) return;
+          var row = th.parentElement;
+          var idx = row ? Array.prototype.indexOf.call(row.children, th) : -1;
+          if (idx >= 0) actionIndexes[idx] = true;
+          hideCol(th);
+        });
+
+      root
+        .querySelectorAll(".view-grid table, .entitylist table")
+        .forEach(function (table) {
+          Object.keys(actionIndexes).forEach(function (key) {
+            hideColumnAt(table, parseInt(key, 10));
+          });
+
+          var firstRow = table.querySelector("tbody > tr");
+          if (!firstRow) return;
+          var cells = firstRow.children;
+          if (cells.length < 2) return;
+          var last = cells[cells.length - 1];
+          if (
+            last &&
+            !last.getAttribute("data-attribute") &&
+            !last.querySelector(".aal-status-pill, a.aal-ba-link") &&
+            (last.classList.contains("aal-action-col") ||
+              isActionCell(last) ||
+              !(last.textContent || "").replace(/\s+/g, " ").trim())
+          ) {
+            hideColumnAt(table, cells.length - 1);
+          }
+        });
+    }
+
+    function statusModifier(text) {
+      var key = String(text || "").trim().toLowerCase();
+      if (/^(active|new|draft|soon|inactive|closed|cancelled|canceled)$/.test(key)) {
+        return " is-muted";
+      }
+      if (/^submitted$/.test(key)) return " is-submitted";
+      if (/^processing$/.test(key)) return " is-processing";
+      if (/^approved$/.test(key)) return " is-approved";
+      if (/^denied$/.test(key)) return " is-denied";
+      return "";
+    }
+
+    function statusCellForRow(row) {
+      var byAttr = row.querySelector('td[data-attribute="cr137_applicationstatus"]');
+      if (byAttr) return byAttr;
+      var byAppTh = row.querySelector('td[data-th="Application Status"]');
+      if (byAppTh) return byAppTh;
+      return statecodeCellForRow(row);
+    }
+
+    function setStatusPill(row, text) {
+      var cell = statusCellForRow(row);
+      if (
+        !cell ||
+        cell.classList.contains("aal-open-col") ||
+        cell.classList.contains("aal-action-col") ||
+        cell.querySelector("a.aal-ba-link")
+      ) {
+        return;
+      }
+      var label = normalizeLifecycleStatus(text);
+      if (!label) label = "Draft";
+      if (/view details|^\s*edit\s*$/i.test(label)) return;
+      if (/^(active|inactive)$/i.test(label)) label = "Draft";
+      var nextClass = "aal-status-pill" + statusModifier(label);
+      var pill = cell.querySelector(".aal-status-pill");
+      if (pill && pill.textContent === label && pill.className === nextClass) return;
+      if (!pill) {
+        cell.textContent = "";
+        pill = document.createElement("span");
+        cell.appendChild(pill);
+      }
+      pill.className = nextClass;
+      pill.textContent = label;
+    }
+
+    function pillify() {
+      var rows = root.querySelectorAll(
+        ".view-grid table > tbody > tr, .entitylist table > tbody > tr"
+      );
+      rows.forEach(function (row) {
+        if (row.classList.contains("view-empty") || row.querySelector("td.view-empty")) {
+          return;
+        }
+        var id = rowRecordId(row);
+        var meta = id ? metaCache[id] : null;
+        var fromMeta = meta && normalizeLifecycleStatus(meta.status);
+        if (fromMeta) {
+          setStatusPill(row, fromMeta);
+          return;
+        }
+        var appCell =
+          row.querySelector('td[data-attribute="cr137_applicationstatus"]') ||
+          row.querySelector('td[data-th="Application Status"]');
+        var raw = "";
+        if (appCell) {
+          raw = normalizeLifecycleStatus(
+            (appCell.querySelector(".aal-status-pill") &&
+              appCell.querySelector(".aal-status-pill").textContent) ||
+              appCell.textContent
+          );
+        }
+        setStatusPill(row, raw || "Draft");
+      });
+    }
+
+    function refresh() {
+      dedupeCreateButtons();
+      wireCreateButton();
+      linkifyOpenColumn();
+      stripRowActions();
+      pillify();
+    }
+
+    try {
+      var seedEl = document.getElementById("aalBaAppsJson");
+      if (seedEl && seedEl.textContent) {
+        seededApps = JSON.parse(seedEl.textContent) || [];
+        seededApps.forEach(function (app) {
+          var id = normalizeGuid(app && app.id);
+          if (!id) return;
+          var st =
+            normalizeLifecycleStatus(app && app.status) ||
+            normalizeLifecycleStatus(statusLabelFromValue(app && app.status));
+          metaCache[id] = {
+            ba: cleanBaNumber(app.ba),
+            status: st,
+            readonly: isLockedStatus(st)
+          };
+        });
+      }
+    } catch (err) {
+      seededApps = [];
+    }
+
+    try {
+      var justId = normalizeGuid(sessionStorage.getItem("aal-ba-just-submitted-id") || "");
+      if (justId) {
+        var prev = metaCache[justId] || {};
+        var pendingBa = cleanBaNumber(sessionStorage.getItem("aal-ba-pending-number") || "");
+        metaCache[justId] = {
+          ba: pendingBa || prev.ba || "",
+          status: "Submitted",
+          readonly: true
+        };
+        sessionStorage.removeItem("aal-ba-pending-number");
+      }
+    } catch (err) {}
+
+    refresh();
+
+    if (window.MutationObserver) {
+      var timer = null;
+      new MutationObserver(function () {
+        clearTimeout(timer);
+        timer = setTimeout(refresh, 50);
+      }).observe(root, { childList: true, subtree: true });
+    }
+
+    if (window.jQuery) {
+      window.jQuery(function () {
+        window
+          .jQuery(root)
+          .find(".entitylist.entity-grid, .entity-grid.entitylist")
+          .on("loaded", function () {
+            refresh();
+          });
+        refresh();
+      });
+    }
+    [300, 1000, 2500].forEach(function (ms) {
+      setTimeout(refresh, ms);
+    });
+  })();
+</script>
+<div class="row sectionBlockLayout text-start" style="display: flex; flex-wrap: wrap; margin: 0px; min-height: auto; padding: 8px;">
+  <div class="container" style="padding: 0px; display: flex; flex-wrap: wrap;"><div class="col-lg-12 columnBlockLayout" style="flex-grow: 1; display: flex; flex-direction: column; min-width: 250px;"></div></div>
+</div>

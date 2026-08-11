@@ -10,6 +10,87 @@ export const BUILDING_APPROVAL_ENTITY_SET = "cr137_buildingactivityapplications"
 export const BUILDING_APPROVAL_ENTITY_LOGICAL_NAME = "cr137_buildingactivityapplication";
 export const BUILDING_APPROVAL_ID_FIELD = "cr137_buildingactivityapplicationid";
 
+/**
+ * Explicit $select lists for Power Pages Web API. Omitting $select is treated as `*` and fails with
+ * 90040101 ("Attribute * … is not enabled for Web Api") even when individual columns are allowlisted
+ * in site setting Webapi/cr137_buildingactivityapplication/fields. Keep these in sync with that setting.
+ *
+ * Lookups must use _<logicalname>_value in $select — bare cr137_portaluser yields Power Pages'
+ * generic "An unexpected error occurred".
+ */
+
+/** Columns needed by the submissions grid (+ portaluser for client-side scoping). */
+export const BUILDING_APPROVAL_GRID_SELECT = [
+  BUILDING_APPROVAL_ID_FIELD,
+  "cr137_buildingactivitynumber",
+  "cr137_applicationstatus",
+  "cr137_applicationdate",
+  "cr137_applicantemail",
+  "_cr137_portaluser_value",
+].join(",");
+
+/** Full form payload for wizard retrieve. */
+export const BUILDING_APPROVAL_WEBAPI_SELECT = [
+  BUILDING_APPROVAL_ID_FIELD,
+  "cr137_buildingactivitynumber",
+  "cr137_applicationstatus",
+  "cr137_applicationdate",
+  "cr137_applicantname",
+  "cr137_applicantpostaladdress",
+  "cr137_applicantcontactperson",
+  "cr137_applicantemail",
+  "cr137_applicanttelephone",
+  "cr137_applicantfacsimile",
+  "cr137_ownername",
+  "cr137_ownerpostaladdress",
+  "cr137_ownercontactperson",
+  "cr137_owneremail",
+  "cr137_ownertelephone",
+  "cr137_ownerfacsimile",
+  "cr137_worklocation",
+  "cr137_workdescription",
+  "cr137_workpurpose",
+  "cr137_estimatedstartdate",
+  "cr137_estimatedcompletiondate",
+  "cr137_buildingcontractornamw",
+  "cr137_consultantpostaladdress",
+  "cr137_consultantcontactperson",
+  "cr137_consultantemail",
+  "cr137_consultanttelephone",
+  "cr137_consultantfacsimile",
+  "cr137_estimatedbuildingactivityvalue",
+  "cr137_feeamounttype",
+  "cr137_masterplanreference",
+  "cr137_environmentalstrategy",
+  "cr137_mdpdetails",
+  "cr137_applicantsignature",
+  "cr137_signaturedate",
+  "cr137_supportingdocuments",
+  // Lookups must be $select'd as _<name>_value — bare cr137_portaluser → "An unexpected error occurred".
+  "_cr137_portaluser_value",
+  "cr137_electricalsupplyapplicationrequir",
+  "cr137_meterprovided",
+  "cr137_ampsperphase",
+  "cr137_totalpowerdemand",
+  "cr137_electricalmaximumdemandandsupply",
+  "cr137_domesticwaterconnectionrequired",
+  "cr137_domesticwatermeterprovided",
+  "cr137_domesticwaterdemand",
+  "cr137_recycledwaterconnectionrequired",
+  "cr137_recycledwatermeterprovided",
+  "cr137_recycledwaterdemand",
+  "cr137_sewerageconnectionrequired",
+  "cr137_seweragedemand",
+  "cr137_firewaterconnectionrequired",
+  "cr137_firewaterdemand",
+  "cr137_backflowpreventiondeviceconfirmat",
+  "cr137_securityrestrictedarea",
+  "cr137_customscontrolledarea",
+  "cr137_sterilearea",
+  "cr137_airsidefencechangerequired",
+  "cr137_securitydesigndetails",
+].join(",");
+
 /** Confirmed real choice values (cr137_applicationstatus option set). */
 export enum ApplicationStatus {
   Draft = 466860000,
@@ -129,7 +210,7 @@ export interface BuildingApprovalRecord extends BuildingApprovalFormData {
   baNumber?: string;
   status: ApplicationStatus;
   requestDate?: string;
-  /** contact record id backing cr137_portaluser — TODO: confirm the lookup's target table is `contact` (see docs/open-questions.md item 4b). */
+  /** contact record id backing cr137_portaluser (lookup target confirmed as `contact`; bind uses nav prop `cr137_PortalUser`). */
   portalUserId?: string;
 }
 

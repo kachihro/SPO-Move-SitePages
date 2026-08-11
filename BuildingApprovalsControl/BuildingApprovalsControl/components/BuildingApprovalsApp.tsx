@@ -26,7 +26,7 @@ export const BuildingApprovalsApp: React.FC<BuildingApprovalsAppProps> = ({ clie
   };
 
   return (
-    <FluentProvider theme={airportTheme} style={{ background: "transparent" }}>
+    <FluentProvider theme={airportTheme} style={{ background: "transparent", width: "100%", display: "block" }}>
       <PortalChrome />
       <DataverseClientContext.Provider value={client}>
         {view.name === "grid" && (
