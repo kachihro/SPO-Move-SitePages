@@ -1,11 +1,34 @@
 import * as React from "react";
-import { Button, MessageBar, MessageBarBody, Spinner } from "@fluentui/react-components";
+import { makeStyles, MessageBar, MessageBarBody, Spinner, tokens } from "@fluentui/react-components";
 import { useDataverseClient } from "../../services/DataverseClientContext";
 import { ApplicationStatus, BuildingApprovalFormData, emptyFormData } from "../../types/BuildingApproval";
+import { HeroButton } from "../HeroButton";
 import { WizardStepper } from "./WizardStepper";
 import { StepApplicantAndActivity } from "./steps/StepApplicantAndActivity";
 import { StepFeeAndChecklist } from "./steps/StepFeeAndChecklist";
 import { StepReview } from "./steps/StepReview";
+
+const useStyles = makeStyles({
+  card: {
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: tokens.borderRadiusXLarge,
+    backgroundColor: tokens.colorNeutralBackground1,
+    boxShadow: tokens.shadow2,
+    padding: tokens.spacingHorizontalXXL,
+    marginTop: tokens.spacingVerticalM,
+  },
+  footer: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginTop: tokens.spacingVerticalXXL,
+    paddingTop: tokens.spacingVerticalL,
+    borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
+  },
+  footerActions: {
+    display: "flex",
+    gap: tokens.spacingHorizontalS,
+  },
+});
 
 export type WizardMode = "new" | "edit" | "view";
 
@@ -20,6 +43,7 @@ export interface ApprovalWizardProps {
 const STEP_LABELS = ["Step 1", "Step 2", "Step 3"];
 
 export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: initialRecordId, contactId, onCancel, onSaved }) => {
+  const styles = useStyles();
   const client = useDataverseClient();
   const readOnly = mode === "view";
 
@@ -108,11 +132,13 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
 
   return (
     <div>
-      <p>
-        <b>Tip:</b> Use <i>Next</i> to continue. Use <i>Save Draft</i> to save progress and leave. Use{" "}
-        <i>Cancel</i> to leave without saving this step. On the last step, use <i>Submit</i> to send your
-        application.
-      </p>
+      <MessageBar intent="info" style={{ marginBottom: tokens.spacingVerticalM }}>
+        <MessageBarBody>
+          <b>Tip:</b> Use <i>Next</i> to continue. Use <i>Save Draft</i> to save progress and leave. Use{" "}
+          <i>Cancel</i> to leave without saving this step. On the last step, use <i>Submit</i> to send your
+          application.
+        </MessageBarBody>
+      </MessageBar>
 
       <WizardStepper current={step} labels={STEP_LABELS} onSelect={setStep} />
 
@@ -122,35 +148,35 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
         </MessageBar>
       )}
 
-      <div style={{ background: "white", padding: "24px", marginTop: "12px" }}>
+      <div className={styles.card}>
         {step === 1 && <StepApplicantAndActivity formData={formData} onChange={setFormData} readOnly={readOnly} />}
         {step === 2 && <StepFeeAndChecklist formData={formData} onChange={setFormData} readOnly={readOnly} />}
         {step === 3 && <StepReview baNumber={baNumber} />}
 
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "24px" }}>
-          <Button appearance="secondary" onClick={onCancel} disabled={saving}>
+        <div className={styles.footer}>
+          <HeroButton onClick={onCancel} disabled={saving}>
             Cancel
-          </Button>
-          <div style={{ display: "flex", gap: "8px" }}>
+          </HeroButton>
+          <div className={styles.footerActions}>
             {step > 1 && (
-              <Button appearance="secondary" onClick={handlePrev} disabled={saving}>
+              <HeroButton onClick={handlePrev} disabled={saving}>
                 Prev
-              </Button>
+              </HeroButton>
             )}
             {!readOnly && (
-              <Button appearance="secondary" onClick={() => void handleSaveDraft()} disabled={saving}>
+              <HeroButton onClick={() => void handleSaveDraft()} disabled={saving}>
                 Save Draft
-              </Button>
+              </HeroButton>
             )}
             {!readOnly && step < STEP_LABELS.length && (
-              <Button appearance="primary" onClick={() => void handleNext()} disabled={saving}>
+              <HeroButton onClick={() => void handleNext()} disabled={saving}>
                 Next
-              </Button>
+              </HeroButton>
             )}
             {!readOnly && step === STEP_LABELS.length && (
-              <Button appearance="primary" onClick={() => void handleSubmit()} disabled={saving}>
+              <HeroButton onClick={() => void handleSubmit()} disabled={saving}>
                 Submit
-              </Button>
+              </HeroButton>
             )}
           </div>
         </div>

@@ -16,6 +16,8 @@ import {
   DialogSurface,
   DialogTitle,
   DialogTrigger,
+  Link,
+  makeStyles,
   MessageBar,
   MessageBarBody,
   Spinner,
@@ -25,6 +27,48 @@ import {
 } from "@fluentui/react-components";
 import { useDataverseClient } from "../../services/DataverseClientContext";
 import { ApplicationStatus, BuildingApprovalRecord } from "../../types/BuildingApproval";
+import { HeroButton } from "../HeroButton";
+
+const useStyles = makeStyles({
+  toolbar: {
+    display: "flex",
+    justifyContent: "flex-end",
+    marginBottom: tokens.spacingVerticalM,
+  },
+  card: {
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: tokens.borderRadiusXLarge,
+    overflow: "hidden",
+    backgroundColor: tokens.colorNeutralBackground1,
+    boxShadow: tokens.shadow2,
+  },
+  headerRow: {
+    backgroundColor: tokens.colorNeutralBackground3,
+  },
+  headerCell: {
+    fontSize: tokens.fontSizeBase200,
+    fontWeight: tokens.fontWeightSemibold,
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+    color: tokens.colorNeutralForeground3,
+  },
+  row: {
+    ":hover": {
+      backgroundColor: tokens.colorNeutralBackground1Hover,
+    },
+  },
+  baLink: {
+    fontWeight: tokens.fontWeightSemibold,
+  },
+  emptyState: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: tokens.spacingVerticalM,
+    padding: `${tokens.spacingVerticalXXXL} ${tokens.spacingHorizontalM}`,
+    color: tokens.colorNeutralForeground3,
+  },
+});
 
 export interface SubmissionsGridProps {
   contactId: string;
@@ -45,13 +89,14 @@ const statusLabel: Record<ApplicationStatus, string> = {
 
 const statusColor: Record<ApplicationStatus, "subtle" | "informative" | "warning" | "success" | "danger"> = {
   [ApplicationStatus.Draft]: "subtle",
-  [ApplicationStatus.Submitted]: "informative",
-  [ApplicationStatus.Processing]: "warning",
+  [ApplicationStatus.Submitted]: "warning",
+  [ApplicationStatus.Processing]: "informative",
   [ApplicationStatus.Approved]: "success",
   [ApplicationStatus.Denied]: "danger",
 };
 
 export const SubmissionsGrid: React.FC<SubmissionsGridProps> = ({ contactId, onCreate, onEdit, onView, refreshToken }) => {
+  const styles = useStyles();
   const client = useDataverseClient();
   const [records, setRecords] = React.useState<BuildingApprovalRecord[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -93,9 +138,9 @@ export const SubmissionsGrid: React.FC<SubmissionsGridProps> = ({ contactId, onC
       renderHeaderCell: () => "BA Number",
       renderCell: (item) => (
         <TableCellLayout>
-          <Button appearance="transparent" onClick={() => onView(item.id)}>
+          <Link className={styles.baLink} onClick={() => onView(item.id)}>
             {item.baNumber ?? "(unassigned)"}
-          </Button>
+          </Link>
         </TableCellLayout>
       ),
     }),
@@ -148,10 +193,8 @@ export const SubmissionsGrid: React.FC<SubmissionsGridProps> = ({ contactId, onC
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: tokens.spacingVerticalM }}>
-        <Button appearance="primary" onClick={onCreate}>
-          Create
-        </Button>
+      <div className={styles.toolbar}>
+        <HeroButton onClick={onCreate}>Create</HeroButton>
       </div>
 
       {error && (
@@ -162,19 +205,32 @@ export const SubmissionsGrid: React.FC<SubmissionsGridProps> = ({ contactId, onC
 
       {loading ? (
         <Spinner label="Loading submissions..." />
+      ) : records.length === 0 ? (
+        <div className={styles.card}>
+          <div className={styles.emptyState}>
+            <span>No submissions yet.</span>
+            <HeroButton onClick={onCreate}>Create your first application</HeroButton>
+          </div>
+        </div>
       ) : (
-        <DataGrid items={records} columns={columns} getRowId={(item: BuildingApprovalRecord) => item.id} sortable>
-          <DataGridHeader>
-            <DataGridRow>{({ renderHeaderCell }) => <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>}</DataGridRow>
-          </DataGridHeader>
-          <DataGridBody<BuildingApprovalRecord>>
-            {({ item, rowId }) => (
-              <DataGridRow<BuildingApprovalRecord> key={rowId}>
-                {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
+        <div className={styles.card}>
+          <DataGrid items={records} columns={columns} getRowId={(item: BuildingApprovalRecord) => item.id} sortable>
+            <DataGridHeader className={styles.headerRow}>
+              <DataGridRow>
+                {({ renderHeaderCell }) => (
+                  <DataGridHeaderCell className={styles.headerCell}>{renderHeaderCell()}</DataGridHeaderCell>
+                )}
               </DataGridRow>
-            )}
-          </DataGridBody>
-        </DataGrid>
+            </DataGridHeader>
+            <DataGridBody<BuildingApprovalRecord>>
+              {({ item, rowId }) => (
+                <DataGridRow<BuildingApprovalRecord> key={rowId} className={styles.row}>
+                  {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
+                </DataGridRow>
+              )}
+            </DataGridBody>
+          </DataGrid>
+        </div>
       )}
 
       <Dialog open={!!pendingDeleteId} onOpenChange={(_, data) => !data.open && setPendingDeleteId(undefined)}>

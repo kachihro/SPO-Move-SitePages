@@ -1,9 +1,10 @@
 import * as React from "react";
-import { FluentProvider, webLightTheme } from "@fluentui/react-components";
+import { FluentProvider } from "@fluentui/react-components";
 import { DataverseClient } from "../services/DataverseClient";
 import { DataverseClientContext } from "../services/DataverseClientContext";
 import { SubmissionsGrid } from "./grid/SubmissionsGrid";
 import { ApprovalWizard, WizardMode } from "./wizard/ApprovalWizard";
+import { airportTheme } from "./theme";
 
 export interface BuildingApprovalsAppProps {
   client: DataverseClient;
@@ -22,7 +23,7 @@ export const BuildingApprovalsApp: React.FC<BuildingApprovalsAppProps> = ({ clie
   };
 
   return (
-    <FluentProvider theme={webLightTheme} style={{ background: "transparent" }}>
+    <FluentProvider theme={airportTheme} style={{ background: "transparent" }}>
       <DataverseClientContext.Provider value={client}>
         {view.name === "grid" && (
           <SubmissionsGrid

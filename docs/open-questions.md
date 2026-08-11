@@ -61,9 +61,17 @@ building further — do not guess at real values in code.
    their platform team before assuming a specific CI mechanism.
 
 ## Still to do (next session)
-- **Styling**: control is functionally live but visually bare (plain header, unstyled grid) — needs a
-  container/card treatment to match the target mockups, and to confirm Fluent's theme tokens are actually
-  applying correctly inside the Power Pages page shell.
+- ~~**Styling**~~ — **done**: custom Fluent brand theme (`components/theme.ts`, magenta/pink ramp
+  approximated from the target mockups) applied via `FluentProvider`; grid wrapped in a rounded/bordered
+  card with a muted header row and colored status badges; BA Number rendered as a styled link; empty state
+  added. All primary actions (Create, Cancel/Prev/Save Draft/Next/Submit, step tabs) now use a shared
+  `HeroButton`/pill treatment (`components/HeroButton.tsx`) matching the full-flow mockups shared
+  2026-08-11, which showed every wizard footer button and the step tabs as solid gradient pills, not just
+  the primary action — confirmed via computed-style checks in the PCF test harness (`npm run start`), not
+  just visually. Still worth a real-environment pass to confirm the brand hex values against any official
+  design tokens if/when supplied. **Not** in this control's scope (native Power Pages page chrome per item
+  7): the login/dashboard pages, the page eyebrow/title/breadcrumb text, and hiding the native Basic Form
+  Submit button — those live outside this repo.
 - **Full checklist coverage** per item 5 above — needs scoping first.
 - **Hide the native Basic Form Submit button/CAPTCHA chrome** on the live page — our control has its own
   Save Draft/Next/Submit buttons, so the form's native Submit is redundant (CAPTCHA was already turned
@@ -75,6 +83,27 @@ building further — do not guess at real values in code.
 - Anchor field's actual saved schema name — confirmed different from the `cr137_pcfanchor` originally
   suggested (the publisher-prefix picker defaulted elsewhere); doesn't matter functionally (see chat), but
   worth writing down here once known for future reference.
+
+## Upcoming build features (flagged 2026-08-11)
+1. **Prove form branching logic (Yes/No reveal further questions).** `StepFeeAndChecklist.tsx` already has
+   a working example of this pattern for the "Electrical" trade (the "New supply required" checkbox reveals
+   Voltage/Increased-supply-required, which itself reveals Present/Requested Supply rating) — needs
+   confirming this is the pattern to replicate, and then applying it across the ~100 other trade columns
+   once item 5's scoping happens, plus to the newer fields visible in the shared mockups (Description of
+   Works, Purpose of Works, Estimated Start/Completion Date) that aren't modeled in
+   `types/BuildingApproval.ts` yet — **don't guess real column names for these, confirm against the schema
+   first**, same rule as item 4.
+2. **Finalise 'Draft' functionality for users to continue applications.** Largely already implemented:
+   `ApprovalWizard`'s `persist()` is create-once-then-always-update via explicit `recordId` state (fixes
+   the duplicate-draft bug below), and edit/view mode loads the record via `client.retrieve(recordId)` on
+   mount. "Finalise" likely means end-to-end verification against the real environment (a `pac pcf push` +
+   live resume test), not new code — confirm with the user before assuming further build work is needed
+   here.
+3. **Workflow connected to the 'Submit' button for form data transfer.** `handleSubmit()` already persists
+   the record with `ApplicationStatus.Submitted`. The actual downstream workflow (Power Automate flow or
+   Dataverse plugin reacting to that status change) is server-side infrastructure outside this PCF
+   control's code — needs a scoping conversation (what should happen on submit — notify staff? create a
+   case? call an external system?) before any of it can be built.
 
 ## Known bugs in the native implementation this rebuild is meant to fix
 - Duplicate draft record created on Save Draft.
