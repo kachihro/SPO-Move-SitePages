@@ -9,8 +9,8 @@
 
 export const PORTAL_CHROME_STYLE_ID = "aal-ba-portal-chrome-hide";
 
-/** Wider than Bootstrap `.container` (~1170px) so the BA panel can breathe. */
-const PAGE_MAX_WIDTH = "1600px";
+/** Match the original `.aal-submissions` middle pane. */
+const PAGE_MAX_WIDTH = "1288px";
 
 export const PORTAL_CHROME_CSS = `
 #cr0e0_pcfanchor_label,
@@ -44,9 +44,9 @@ table[data-name="panel_PCF"] > tbody > tr:not(:has(.control[data-logical-name*="
 }
 
 /*
- * Power Pages Bootstrap .container (~1170px) + section padding leave the PCF
- * as a narrow, vertically inset card. Widen the host column and collapse top
- * spacing so the beige panel sits under the header like the original page.
+ * Power Pages Bootstrap .container (~1170px) + section padding inset the PCF.
+ * Cap the host at the original middle-pane width and collapse top spacing so
+ * the beige panel sits under the header like the original page.
  */
 body:has(.aal-ba-shell) #mainContent,
 body:has(#BuildingApprovalsControl) #mainContent,

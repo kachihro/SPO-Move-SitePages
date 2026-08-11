@@ -36,12 +36,13 @@ building further — do not guess at real values in code.
      (Money), `cr137_feeamounttype` (choice, values 1–5, see `FEE_AMOUNT_TYPE_OPTIONS`). Attached
      Documents → `cr137_supportingdocuments`.
    - **`cr137_portaluser`** is a lookup (`EntityReference`) — this is the real "my submissions" scoping
-     field, now used in both clients' `retrieveMultiple` (`_cr137_portaluser_value eq <id>`). **4b.
-     resolved**: `create()` wires it via `"cr137_PortalUser@odata.bind": "/contacts(<id>)"` in
-     `mapping.ts` — must use the single-valued navigation property (`ReferencingEntityNavigationPropertyName`
-     = `cr137_PortalUser`), not the attribute logical name `cr137_portaluser`. Using the logical name
-     yields CDS `0x80048d19` / Power Pages `9004010D` ("Error identified in Payload"). Target is
-     `contact` (confirmed via relationship Targets).
+     field (client-side filter on `_cr137_portaluser_value`). **4b. resolved**: Target is `contact`.
+     Raw Portal `/_api/` uses `"cr137_PortalUser@odata.bind": "/contacts(<id>)"` (nav prop
+     `cr137_PortalUser`). **PCF `context.webAPI` must NOT use `@odata.bind`** (Power Pages polyfill
+     strips it) and must NOT put `/contact(<id>)` into `_cr137_portaluser_value` (that field is
+     `Edm.Guid` — path form yields CDS `0x80048d19` / `9004010D`). Use bare GUID:
+     `"_cr137_portaluser_value": "<id>"` via `portalUserLookupPayloads()` in `mapping.ts`. Create
+     writes the row first, then PATCHes the lookup.
    - This table has **~140 columns total** — only the ones the current wizard steps use are modeled in
      `BuildingApprovalEntity`; add more as the wizard grows (see item 5).
 5. **Step 2's real checklist scope.** Resolved which columns exist (full pull below), but only a subset is

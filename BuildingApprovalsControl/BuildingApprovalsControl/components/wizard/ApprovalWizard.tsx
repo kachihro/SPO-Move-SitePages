@@ -17,7 +17,7 @@ const useStyles = makeStyles({
     flexDirection: "column",
     boxSizing: "border-box",
     width: "100%",
-    maxWidth: "1600px",
+    maxWidth: "1288px",
     marginLeft: "auto",
     marginRight: "auto",
     padding: "12px 24px 48px",

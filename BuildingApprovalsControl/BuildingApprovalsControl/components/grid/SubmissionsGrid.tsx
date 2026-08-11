@@ -25,13 +25,13 @@ import { ApplicationStatus, BuildingApprovalRecord } from "../../types/BuildingA
 import { HeroButton } from "../HeroButton";
 
 const useStyles = makeStyles({
-  /** Paper panel — width follows the portal host (widened to 1600px). */
+  /** Paper panel — same width as the original `.aal-submissions` middle pane. */
   root: {
     display: "flex",
     flexDirection: "column",
     boxSizing: "border-box",
     width: "100%",
-    maxWidth: "1600px",
+    maxWidth: "1288px",
     marginLeft: "auto",
     marginRight: "auto",
     padding: "12px 24px 48px",

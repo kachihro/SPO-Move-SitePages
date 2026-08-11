@@ -122,12 +122,14 @@ export class WebApiClient implements DataverseClient {
       const portalUserId = normalizeGuid(data.portalUserId);
       const binds = portalUserLookupPayloads(portalUserId);
 
-      // Prefer Power Pages `_…_value` form — the polyfill strips `@odata.bind` keys silently.
-      const result = await this.webAPI.createRecord(BUILDING_APPROVAL_ENTITY_SET, {
-        ...mapFromRecord(data),
-        ...binds.powerPages,
-      });
+      // Create the row first *without* the lookup. Including `_cr137_portaluser_value` on the
+      // same POST can fail on Power Pages with an opaque rejection (no OData body) even when
+      // Create permission is fine. Bind Portal User on a follow-up update instead.
+      const result = await this.webAPI.createRecord(BUILDING_APPROVAL_ENTITY_SET, mapFromRecord(data));
       const id = normalizeGuid(result.id);
+      if (!id) {
+        throw new Error("Dataverse create returned no record id.");
+      }
 
       if (!(await this.hasPortalUser(id, portalUserId))) {
         await this.trySetPortalUser(id, binds);
@@ -195,7 +197,8 @@ export class WebApiClient implements DataverseClient {
     binds: ReturnType<typeof portalUserLookupPayloads>
   ): Promise<void> {
     const id = normalizeGuid(recordId);
-    for (const payload of [binds.powerPages, binds.powerPagesBare, binds.odata]) {
+    // Prefer bare GUID on `_…_value` (Edm.Guid). Fall back to @odata.bind for non-PP hosts.
+    for (const payload of [binds.powerPages, binds.odata]) {
       try {
         await this.webAPI.updateRecord(BUILDING_APPROVAL_ENTITY_SET, id, payload);
       } catch {
