@@ -1,0 +1,24 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "whichFolder": "subdir",
+    "solutionName": "sitepages-page-move-extension-123",
+    "environment": "spo",
+    "packageManager": "npm",
+    "skipFeatureDeployment": true,
+    "useGulp": false,
+    "componentType": "extension",
+    "extensionType": "ListViewCommandSet",
+    "template": "none",
+    "componentName": "MovePageToFolder",
+    "componentDescription": "Move Site Pages into folders",
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "20.20.2",
+    "sdksVersions": {},
+    "version": "1.23.0",
+    "libraryName": "sitepages-page-move-extension-123",
+    "libraryId": "40489416-24b2-459f-974a-4c09f186d144",
+    "solutionShortDescription": "sitepages-page-move-extension-123 description",
+    "isDomainIsolated": false
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/spfx-serve.schema.json",
+  "port": 4321,
+  "https": true,
+  "serveConfigurations": {
+    "default": {
+      "pageUrl": "https://{tenantDomain}/SitePages/Forms/ByAuthor.aspx",
+      "customActions": {
+        "9059cbd7-7e32-4692-9bfc-7898d89ffaf7": {
+          "location": "ClientSideExtension.ListViewCommandSet.CommandBar",
+          "properties": {}
+        }
+      }
+    },
+    "movePageToFolderCommandBar": {
+      "pageUrl": "https://{tenantDomain}/SitePages/Forms/ByAuthor.aspx",
+      "customActions": {
+        "9059cbd7-7e32-4692-9bfc-7898d89ffaf7": {
+          "location": "ClientSideExtension.ListViewCommandSet.CommandBar",
+          "properties": {}
+        }
+      }
+    },
+    "movePageToFolderContextMenu": {
+      "pageUrl": "https://{tenantDomain}/SitePages/Forms/ByAuthor.aspx",
+      "customActions": {
+        "9059cbd7-7e32-4692-9bfc-7898d89ffaf7": {
+          "location": "ClientSideExtension.ListViewCommandSet.ContextMenu",
+          "properties": {}
+        }
+      }
+    }
+  }
+}

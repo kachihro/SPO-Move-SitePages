@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Elements xmlns="http://schemas.microsoft.com/sharepoint/">
+    <ClientSideComponentInstance
+        Title="MovePageToFolder"
+        Location="ClientSideExtension.ListViewCommandSet.CommandBar"
+        ListTemplateId="119"
+        Properties="{}"
+        ComponentId="9059cbd7-7e32-4692-9bfc-7898d89ffaf7" />
+    <ClientSideComponentInstance
+        Title="MovePageToFolder"
+        Location="ClientSideExtension.ListViewCommandSet.ContextMenu"
+        ListTemplateId="119"
+        Properties="{}"
+        ComponentId="9059cbd7-7e32-4692-9bfc-7898d89ffaf7" />
+</Elements>

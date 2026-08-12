@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Elements xmlns="http://schemas.microsoft.com/sharepoint/">
+    <CustomAction
+        Title="MovePageToFolder"
+        RegistrationId="119"
+        RegistrationType="List"
+        Location="ClientSideExtension.ListViewCommandSet.CommandBar"
+        ClientSideComponentId="9059cbd7-7e32-4692-9bfc-7898d89ffaf7"
+        ClientSideComponentProperties="{}">
+    </CustomAction>
+    <CustomAction
+        Title="MovePageToFolder"
+        RegistrationId="119"
+        RegistrationType="List"
+        Location="ClientSideExtension.ListViewCommandSet.ContextMenu"
+        ClientSideComponentId="9059cbd7-7e32-4692-9bfc-7898d89ffaf7"
+        ClientSideComponentProperties="{}">
+    </CustomAction>
+</Elements>

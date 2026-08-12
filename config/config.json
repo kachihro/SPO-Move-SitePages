@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "move-page-to-folder-command-set": {
+      "components": [
+        {
+          "entrypoint": "./lib/extensions/movePageToFolder/MovePageToFolderCommandSet.js",
+          "manifest": "./src/extensions/movePageToFolder/MovePageToFolderCommandSet.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "MovePageToFolderCommandSetStrings": "lib/extensions/movePageToFolder/loc/{locale}.js"
+  }
+}
