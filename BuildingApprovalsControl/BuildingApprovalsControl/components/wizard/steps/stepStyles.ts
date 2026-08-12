@@ -1,0 +1,117 @@
+import { makeStyles } from "@fluentui/react-components";
+
+/** Shared branded section / field styles used by wizard steps 1–3. */
+export const useStepStyles = makeStyles({
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    columnGap: "24px",
+    rowGap: "24px",
+    marginTop: "4px",
+  },
+  stack: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+    marginTop: "4px",
+  },
+  section: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+    minWidth: 0,
+    padding: "20px 24px",
+    borderRadius: "16px",
+    backgroundColor: "#FFFFFF",
+    border: "1px solid #E8E2DA",
+    boxShadow: "0 4px 18px rgba(40, 30, 20, 0.06)",
+  },
+  sectionTitle: {
+    margin: 0,
+    fontSize: "16px",
+    fontWeight: 700,
+    color: "#1B1B1B",
+  },
+  sectionTitleButton: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "12px",
+    width: "100%",
+    margin: 0,
+    padding: 0,
+    border: "none",
+    background: "transparent",
+    cursor: "pointer",
+    textAlign: "left",
+    font: "inherit",
+    color: "inherit",
+  },
+  sectionTitleText: {
+    margin: 0,
+    fontSize: "16px",
+    fontWeight: 700,
+    color: "#1B1B1B",
+  },
+  chevron: {
+    flexShrink: 0,
+    fontSize: "14px",
+    color: "#9B2D6A",
+    transitionProperty: "transform",
+    transitionDuration: "150ms",
+  },
+  chevronCollapsed: {
+    transform: "rotate(-90deg)",
+  },
+  fieldStack: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+  },
+  twoColumn: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "16px",
+  },
+  subsection: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    marginTop: "4px",
+  },
+  subsectionTitle: {
+    margin: 0,
+    padding: "8px 12px",
+    fontSize: "14px",
+    fontWeight: 600,
+    color: "#1B1B1B",
+    backgroundColor: "#E8E8E8",
+    borderRadius: "4px",
+  },
+  utilityLabel: {
+    margin: "8px 0 0",
+    fontSize: "13px",
+    fontStyle: "italic",
+    color: "#5C5E6B",
+  },
+  input: {
+    borderRadius: "8px",
+    border: "1px solid #E0DBD3",
+    backgroundColor: "#F7F5F2",
+    minHeight: "36px",
+    boxShadow: "none",
+    "::after": {
+      borderBottomWidth: "0",
+    },
+  },
+  textarea: {
+    borderRadius: "8px",
+    border: "1px solid #E0DBD3",
+    backgroundColor: "#F7F5F2",
+    minHeight: "88px",
+    boxShadow: "none",
+    "::after": {
+      borderBottomWidth: "0",
+    },
+  },
+});

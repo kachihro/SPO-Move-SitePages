@@ -1,12 +1,14 @@
 import * as React from "react";
-import { Card, CardHeader, Checkbox, Field, Input, Option, Dropdown, Textarea } from "@fluentui/react-components";
+import { Field, Input, Option, Dropdown, Textarea } from "@fluentui/react-components";
 import { BuildingApprovalFormData, FEE_AMOUNT_TYPE_OPTIONS } from "../../../types/BuildingApproval";
+import { CollapsibleSection } from "./CollapsibleSection";
 import { StepProps } from "./StepApplicantAndActivity";
+import { useStepStyles } from "./stepStyles";
 import { YesNoField } from "./YesNoField";
 
-const twoColumn: React.CSSProperties = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" };
-
 export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, readOnly }) => {
+  const styles = useStepStyles();
+
   const update = (mutate: (data: BuildingApprovalFormData) => void) => {
     const next = JSON.parse(JSON.stringify(formData)) as BuildingApprovalFormData;
     mutate(next);
@@ -16,21 +18,26 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
   const { electrical, hydraulics, security } = formData.checklist;
 
   return (
-    <div>
-      <Card>
-        <CardHeader header={<b>Application Fee</b>} />
+    <div className={styles.stack}>
+      <CollapsibleSection title="Application Fee">
         <Field label="Estimated Value of Building Activity">
           <Input
+            className={styles.input}
             value={formData.estimatedValueOfBuildingActivity?.toString() ?? ""}
             disabled={readOnly}
-            onChange={(_, d) => update((f) => (f.estimatedValueOfBuildingActivity = d.value === "" ? undefined : Number(d.value)))}
+            onChange={(_, d) =>
+              update((f) => (f.estimatedValueOfBuildingActivity = d.value === "" ? undefined : Number(d.value)))
+            }
           />
         </Field>
         <Field label="Fee Amount Type">
           <Dropdown
+            className={styles.input}
             value={FEE_AMOUNT_TYPE_OPTIONS.find((o) => o.value === formData.feeAmountType)?.label ?? ""}
             disabled={readOnly}
-            onOptionSelect={(_, d) => update((f) => (f.feeAmountType = d.optionValue !== undefined ? Number(d.optionValue) : undefined))}
+            onOptionSelect={(_, d) =>
+              update((f) => (f.feeAmountType = d.optionValue !== undefined ? Number(d.optionValue) : undefined))
+            }
           >
             {FEE_AMOUNT_TYPE_OPTIONS.map((opt) => (
               <Option key={opt.value} value={String(opt.value)}>
@@ -39,12 +46,12 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
             ))}
           </Dropdown>
         </Field>
-      </Card>
+      </CollapsibleSection>
 
-      <Card style={{ marginTop: "16px" }}>
-        <CardHeader header={<b>Works Comply With</b>} />
+      <CollapsibleSection title="Works Comply With">
         <Field label="Masterplan">
           <Input
+            className={styles.input}
             value={formData.worksComplyWith.masterplanReference ?? ""}
             disabled={readOnly}
             onChange={(_, d) => update((f) => (f.worksComplyWith.masterplanReference = d.value))}
@@ -52,6 +59,7 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
         </Field>
         <Field label="Environmental Strategy">
           <Input
+            className={styles.input}
             value={formData.worksComplyWith.environmentalStrategy ?? ""}
             disabled={readOnly}
             onChange={(_, d) => update((f) => (f.worksComplyWith.environmentalStrategy = d.value))}
@@ -59,18 +67,17 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
         </Field>
         <Field label="MDP (as applicable)">
           <Input
+            className={styles.input}
             value={formData.worksComplyWith.mdpDetails ?? ""}
             disabled={readOnly}
             onChange={(_, d) => update((f) => (f.worksComplyWith.mdpDetails = d.value))}
           />
         </Field>
-      </Card>
+      </CollapsibleSection>
 
-      <Card style={{ marginTop: "16px" }}>
-        <CardHeader header={<b>Checklist</b>} />
-
-        <div style={{ marginBottom: "20px" }}>
-          <b>5. Electrical</b>
+      <CollapsibleSection title="Checklist">
+        <div className={styles.subsection}>
+          <h4 className={styles.subsectionTitle}>Electrical</h4>
           <YesNoField
             label="Application for electrical supply required"
             value={electrical.supplyApplicationRequired}
@@ -85,24 +92,33 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
                 disabled={readOnly}
                 onChange={(v) => update((f) => (f.checklist.electrical.meterProvided = v))}
               />
-              <div style={twoColumn}>
+              <div className={styles.twoColumn}>
                 <Field label="Amps Per Phase">
                   <Input
+                    className={styles.input}
                     value={electrical.ampsPerPhase?.toString() ?? ""}
                     disabled={readOnly}
-                    onChange={(_, d) => update((f) => (f.checklist.electrical.ampsPerPhase = d.value === "" ? undefined : Number(d.value)))}
+                    onChange={(_, d) =>
+                      update((f) => (f.checklist.electrical.ampsPerPhase = d.value === "" ? undefined : Number(d.value)))
+                    }
                   />
                 </Field>
                 <Field label="Total Power Demand (kwh)">
                   <Input
+                    className={styles.input}
                     value={electrical.totalPowerDemand?.toString() ?? ""}
                     disabled={readOnly}
-                    onChange={(_, d) => update((f) => (f.checklist.electrical.totalPowerDemand = d.value === "" ? undefined : Number(d.value)))}
+                    onChange={(_, d) =>
+                      update(
+                        (f) => (f.checklist.electrical.totalPowerDemand = d.value === "" ? undefined : Number(d.value))
+                      )
+                    }
                   />
                 </Field>
               </div>
               <Field label="Electrical Maximum Demand & Supply — other details (incl. Number of Phases)">
                 <Textarea
+                  className={styles.textarea}
                   value={electrical.maximumDemandAndSupplyDetails ?? ""}
                   disabled={readOnly}
                   onChange={(_, d) => update((f) => (f.checklist.electrical.maximumDemandAndSupplyDetails = d.value))}
@@ -112,100 +128,114 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
           )}
         </div>
 
-        <div style={{ marginBottom: "20px" }}>
-          <b>8. Hydraulics</b>
-
-          <div style={{ marginTop: "8px" }}>
-            <i>Domestic water</i>
-            <YesNoField
-              label="Connection required"
-              value={hydraulics.domesticWater.connectionRequired}
-              disabled={readOnly}
-              onChange={(v) => update((f) => (f.checklist.hydraulics.domesticWater.connectionRequired = v))}
-            />
-            {hydraulics.domesticWater.connectionRequired && (
-              <>
-                <YesNoField
-                  label="Meter provided"
-                  value={hydraulics.domesticWater.meterProvided}
-                  disabled={readOnly}
-                  onChange={(v) => update((f) => (f.checklist.hydraulics.domesticWater.meterProvided = v))}
-                />
-                <Field label="Demand (size of supply or flow rate)">
-                  <Input
-                    value={hydraulics.domesticWater.demand?.toString() ?? ""}
-                    disabled={readOnly}
-                    onChange={(_, d) => update((f) => (f.checklist.hydraulics.domesticWater.demand = d.value === "" ? undefined : Number(d.value)))}
-                  />
-                </Field>
-              </>
-            )}
-          </div>
-
-          <div style={{ marginTop: "16px" }}>
-            <i>Recycled water</i>
-            <YesNoField
-              label="Connection required"
-              value={hydraulics.recycledWater.connectionRequired}
-              disabled={readOnly}
-              onChange={(v) => update((f) => (f.checklist.hydraulics.recycledWater.connectionRequired = v))}
-            />
-            {hydraulics.recycledWater.connectionRequired && (
-              <>
-                <YesNoField
-                  label="Meter provided"
-                  value={hydraulics.recycledWater.meterProvided}
-                  disabled={readOnly}
-                  onChange={(v) => update((f) => (f.checklist.hydraulics.recycledWater.meterProvided = v))}
-                />
-                <Field label="Demand (size of supply or flow rate)">
-                  <Input
-                    value={hydraulics.recycledWater.demand?.toString() ?? ""}
-                    disabled={readOnly}
-                    onChange={(_, d) => update((f) => (f.checklist.hydraulics.recycledWater.demand = d.value === "" ? undefined : Number(d.value)))}
-                  />
-                </Field>
-              </>
-            )}
-          </div>
-
-          <div style={{ marginTop: "16px" }}>
-            <i>Sewerage</i>
-            <YesNoField
-              label="Connection required"
-              value={hydraulics.sewerage.connectionRequired}
-              disabled={readOnly}
-              onChange={(v) => update((f) => (f.checklist.hydraulics.sewerage.connectionRequired = v))}
-            />
-            {hydraulics.sewerage.connectionRequired && (
+        <div className={styles.subsection}>
+          <h4 className={styles.subsectionTitle}>Hydraulics - Domestic water</h4>
+          <YesNoField
+            label="Connection required"
+            value={hydraulics.domesticWater.connectionRequired}
+            disabled={readOnly}
+            onChange={(v) => update((f) => (f.checklist.hydraulics.domesticWater.connectionRequired = v))}
+          />
+          {hydraulics.domesticWater.connectionRequired && (
+            <>
+              <YesNoField
+                label="Meter provided"
+                value={hydraulics.domesticWater.meterProvided}
+                disabled={readOnly}
+                onChange={(v) => update((f) => (f.checklist.hydraulics.domesticWater.meterProvided = v))}
+              />
               <Field label="Demand (size of supply or flow rate)">
                 <Input
-                  value={hydraulics.sewerage.demand?.toString() ?? ""}
+                  className={styles.input}
+                  value={hydraulics.domesticWater.demand?.toString() ?? ""}
                   disabled={readOnly}
-                  onChange={(_, d) => update((f) => (f.checklist.hydraulics.sewerage.demand = d.value === "" ? undefined : Number(d.value)))}
+                  onChange={(_, d) =>
+                    update(
+                      (f) =>
+                        (f.checklist.hydraulics.domesticWater.demand = d.value === "" ? undefined : Number(d.value))
+                    )
+                  }
                 />
               </Field>
-            )}
-          </div>
+            </>
+          )}
+        </div>
 
-          <div style={{ marginTop: "16px" }}>
-            <i>Fire water</i>
-            <YesNoField
-              label="Connection required"
-              value={hydraulics.fireWater.connectionRequired}
-              disabled={readOnly}
-              onChange={(v) => update((f) => (f.checklist.hydraulics.fireWater.connectionRequired = v))}
-            />
-            {hydraulics.fireWater.connectionRequired && (
+        <div className={styles.subsection}>
+          <h4 className={styles.subsectionTitle}>Hydraulics - Recycled water</h4>
+          <YesNoField
+            label="Connection required"
+            value={hydraulics.recycledWater.connectionRequired}
+            disabled={readOnly}
+            onChange={(v) => update((f) => (f.checklist.hydraulics.recycledWater.connectionRequired = v))}
+          />
+          {hydraulics.recycledWater.connectionRequired && (
+            <>
+              <YesNoField
+                label="Meter provided"
+                value={hydraulics.recycledWater.meterProvided}
+                disabled={readOnly}
+                onChange={(v) => update((f) => (f.checklist.hydraulics.recycledWater.meterProvided = v))}
+              />
               <Field label="Demand (size of supply or flow rate)">
                 <Input
-                  value={hydraulics.fireWater.demand?.toString() ?? ""}
+                  className={styles.input}
+                  value={hydraulics.recycledWater.demand?.toString() ?? ""}
                   disabled={readOnly}
-                  onChange={(_, d) => update((f) => (f.checklist.hydraulics.fireWater.demand = d.value === "" ? undefined : Number(d.value)))}
+                  onChange={(_, d) =>
+                    update(
+                      (f) =>
+                        (f.checklist.hydraulics.recycledWater.demand = d.value === "" ? undefined : Number(d.value))
+                    )
+                  }
                 />
               </Field>
-            )}
-          </div>
+            </>
+          )}
+        </div>
+
+        <div className={styles.subsection}>
+          <h4 className={styles.subsectionTitle}>Hydraulics - Sewerage</h4>
+          <YesNoField
+            label="Connection required"
+            value={hydraulics.sewerage.connectionRequired}
+            disabled={readOnly}
+            onChange={(v) => update((f) => (f.checklist.hydraulics.sewerage.connectionRequired = v))}
+          />
+          {hydraulics.sewerage.connectionRequired && (
+            <Field label="Demand (size of supply or flow rate)">
+              <Input
+                className={styles.input}
+                value={hydraulics.sewerage.demand?.toString() ?? ""}
+                disabled={readOnly}
+                onChange={(_, d) =>
+                  update((f) => (f.checklist.hydraulics.sewerage.demand = d.value === "" ? undefined : Number(d.value)))
+                }
+              />
+            </Field>
+          )}
+        </div>
+
+        <div className={styles.subsection}>
+          <h4 className={styles.subsectionTitle}>Hydraulics - Fire water</h4>
+          <YesNoField
+            label="Connection required"
+            value={hydraulics.fireWater.connectionRequired}
+            disabled={readOnly}
+            onChange={(v) => update((f) => (f.checklist.hydraulics.fireWater.connectionRequired = v))}
+          />
+          {hydraulics.fireWater.connectionRequired && (
+            <Field label="Demand (size of supply or flow rate)">
+              <Input
+                className={styles.input}
+                value={hydraulics.fireWater.demand?.toString() ?? ""}
+                disabled={readOnly}
+                onChange={(_, d) =>
+                  update((f) => (f.checklist.hydraulics.fireWater.demand = d.value === "" ? undefined : Number(d.value)))
+                }
+              />
+            </Field>
+          )}
 
           <YesNoField
             label="Confirmation that backflow prevention devices are to be installed on all water supply pipe work within a tenancy"
@@ -215,8 +245,8 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
           />
         </div>
 
-        <div style={{ marginBottom: "20px" }}>
-          <b>14. Security</b>
+        <div className={styles.subsection}>
+          <h4 className={styles.subsectionTitle}>Security</h4>
           <YesNoField
             label="Is the project located in a Security Restricted Area?"
             value={security.securityRestrictedArea}
@@ -243,48 +273,14 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
           />
           <Field label="Details of fencing, security in design, bollards, CCTV, access control, etc.">
             <Textarea
+              className={styles.textarea}
               value={security.securityDesignDetails ?? ""}
               disabled={readOnly}
               onChange={(_, d) => update((f) => (f.checklist.security.securityDesignDetails = d.value))}
             />
           </Field>
         </div>
-
-        <Field label="Attached Documents (please list all supporting documents below)">
-          <Textarea
-            value={formData.attachedDocuments ?? ""}
-            disabled={readOnly}
-            onChange={(_, d) => update((f) => (f.attachedDocuments = d.value))}
-          />
-        </Field>
-      </Card>
-
-      <Card style={{ marginTop: "16px" }}>
-        <CardHeader header={<b>Signature of Owner or Agent</b>} />
-        <div style={twoColumn}>
-          <Field label="Signature">
-            <Input
-              value={formData.signature ?? ""}
-              disabled={readOnly}
-              onChange={(_, d) => update((f) => (f.signature = d.value))}
-            />
-          </Field>
-          <Field label="Date">
-            <Input
-              type="date"
-              value={formData.signatureDate ?? ""}
-              disabled={readOnly}
-              onChange={(_, d) => update((f) => (f.signatureDate = d.value))}
-            />
-          </Field>
-        </div>
-        <Checkbox
-          label="I confirm in the capacity of owner or agent that the information above is correct to the best of my knowledge"
-          checked={!!formData.confirmed}
-          disabled={readOnly}
-          onChange={(_, d) => update((f) => (f.confirmed = !!d.checked))}
-        />
-      </Card>
+      </CollapsibleSection>
     </div>
   );
 };

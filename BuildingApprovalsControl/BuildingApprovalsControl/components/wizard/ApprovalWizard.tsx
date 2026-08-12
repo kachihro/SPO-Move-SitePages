@@ -1,9 +1,21 @@
 import * as React from "react";
-import { Link, makeStyles, mergeClasses, MessageBar, MessageBarBody, Spinner } from "@fluentui/react-components";
+import {
+  Checkbox,
+  Link,
+  makeStyles,
+  mergeClasses,
+  MessageBar,
+  MessageBarBody,
+  Spinner,
+} from "@fluentui/react-components";
 import { generateBaNumber } from "../../services/baNumber";
 import { useDataverseClient } from "../../services/DataverseClientContext";
 import { getErrorMessage } from "../../services/errors";
-import { MISSING_CONTACT_ID_MESSAGE, resolvePortalContactId } from "../../services/portalContactId";
+import {
+  MISSING_CONTACT_ID_MESSAGE,
+  resolvePortalContactId,
+  resolvePortalContactName,
+} from "../../services/portalContactId";
 import { ApplicationStatus, BuildingApprovalFormData, emptyFormData } from "../../types/BuildingApproval";
 import { HeroButton } from "../HeroButton";
 import { WizardStepper } from "./WizardStepper";
@@ -76,12 +88,34 @@ const useStyles = makeStyles({
     fontWeight: 600,
     fontStyle: "normal",
   },
+  footerBlock: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+    marginTop: "28px",
+    paddingTop: "8px",
+  },
+  confirmBlock: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    padding: "16px 20px",
+    borderRadius: "16px",
+    backgroundColor: "#FFFFFF",
+    border: "1px solid #E8E2DA",
+    boxShadow: "0 4px 18px rgba(40, 30, 20, 0.06)",
+  },
+  confirmLabel: {
+    margin: 0,
+    fontSize: "14px",
+    fontWeight: 600,
+    color: "#1B1B1B",
+    lineHeight: 1.45,
+  },
   footer: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: "28px",
-    paddingTop: "8px",
   },
   footerActions: {
     display: "flex",
@@ -122,6 +156,15 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
   const [loading, setLoading] = React.useState(mode !== "new");
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | undefined>(undefined);
+  const [contactName, setContactName] = React.useState(() => resolvePortalContactName());
+  const confirmed = !!formData.confirmed;
+
+  // Re-resolve when reaching step 3 — header / Liquid may not be ready on first paint.
+  React.useEffect(() => {
+    if (readOnly || step !== STEP_LABELS.length) return;
+    setContactName(resolvePortalContactName());
+  }, [readOnly, step]);
+
 
   React.useEffect(() => {
     if (mode === "new") return;
@@ -246,6 +289,10 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
   const handlePrev = () => setStep((s) => Math.max(s - 1, 1));
 
   const handleSubmit = async () => {
+    if (!formData.confirmed) {
+      setError("Please confirm that this form has been completed to the best of your knowledge before submitting.");
+      return;
+    }
     setSaving(true);
     setError(undefined);
     try {
@@ -325,42 +372,58 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
         <div className={styles.allSteps}>
           <StepApplicantAndActivity formData={formData} onChange={setFormData} readOnly />
           <StepFeeAndChecklist formData={formData} onChange={setFormData} readOnly />
-          <StepReview baNumber={baNumber} />
+          <StepReview formData={formData} onChange={setFormData} readOnly />
         </div>
       ) : (
         <>
           {step === 1 && <StepApplicantAndActivity formData={formData} onChange={setFormData} readOnly={false} />}
           {step === 2 && <StepFeeAndChecklist formData={formData} onChange={setFormData} readOnly={false} />}
-          {step === 3 && <StepReview baNumber={baNumber} />}
+          {step === 3 && (
+            <StepReview formData={formData} onChange={setFormData} readOnly={false} />
+          )}
         </>
       )}
 
-      <div className={styles.footer}>
-        <HeroButton onClick={onCancel} disabled={saving}>
-          {readOnly ? "Back" : "Cancel"}
-        </HeroButton>
-        {!readOnly && (
-          <div className={styles.footerActions}>
-            {step > 1 && (
-              <HeroButton onClick={handlePrev} disabled={saving}>
-                Prev
-              </HeroButton>
-            )}
-            {step < STEP_LABELS.length && (
-              <HeroButton onClick={() => void handleNext()} disabled={saving}>
-                Next
-              </HeroButton>
-            )}
-            {step === STEP_LABELS.length && (
-              <HeroButton onClick={() => void handleSubmit()} disabled={saving}>
-                Submit
-              </HeroButton>
-            )}
-            <HeroButton onClick={() => void handleSaveDraft()} disabled={saving}>
-              Save Draft
-            </HeroButton>
+      <div className={styles.footerBlock}>
+        {!readOnly && step === STEP_LABELS.length && (
+          <div className={styles.confirmBlock}>
+            <p className={styles.confirmLabel}>
+              I confirm that this form has been completed to the best of my knowledge
+            </p>
+            <Checkbox
+              label={`I, ${contactName}, confirm in the capacity of owner or agent that this information above is correct.`}
+              checked={confirmed}
+              onChange={(_, d) => setFormData((prev) => ({ ...prev, confirmed: !!d.checked }))}
+            />
           </div>
         )}
+        <div className={styles.footer}>
+          <HeroButton onClick={onCancel} disabled={saving}>
+            {readOnly ? "Back" : "Cancel"}
+          </HeroButton>
+          {!readOnly && (
+            <div className={styles.footerActions}>
+              {step > 1 && (
+                <HeroButton onClick={handlePrev} disabled={saving}>
+                  Prev
+                </HeroButton>
+              )}
+              {step < STEP_LABELS.length && (
+                <HeroButton onClick={() => void handleNext()} disabled={saving}>
+                  Next
+                </HeroButton>
+              )}
+              {step === STEP_LABELS.length && (
+                <HeroButton onClick={() => void handleSubmit()} disabled={saving || !confirmed}>
+                  Submit
+                </HeroButton>
+              )}
+              <HeroButton onClick={() => void handleSaveDraft()} disabled={saving}>
+                Save Draft
+              </HeroButton>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import * as React from "react";
-import { Field, Input, Textarea, makeStyles } from "@fluentui/react-components";
+import { Field, Input, Textarea } from "@fluentui/react-components";
 import { BuildingApprovalFormData } from "../../../types/BuildingApproval";
+import { useStepStyles } from "./stepStyles";
 
 export interface StepProps {
   formData: BuildingApprovalFormData;
@@ -8,62 +9,10 @@ export interface StepProps {
   readOnly: boolean;
 }
 
-const useStyles = makeStyles({
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    columnGap: "24px",
-    rowGap: "24px",
-    marginTop: "4px",
-  },
-  section: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-    minWidth: 0,
-    padding: "20px 24px",
-    borderRadius: "16px",
-    backgroundColor: "#FFFFFF",
-    border: "1px solid #E8E2DA",
-    boxShadow: "0 4px 18px rgba(40, 30, 20, 0.06)",
-  },
-  sectionTitle: {
-    margin: 0,
-    fontSize: "16px",
-    fontWeight: 700,
-    color: "#1B1B1B",
-  },
-  fieldStack: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-  },
-  input: {
-    borderRadius: "8px",
-    border: "1px solid #E0DBD3",
-    backgroundColor: "#F7F5F2",
-    minHeight: "36px",
-    boxShadow: "none",
-    "::after": {
-      borderBottomWidth: "0",
-    },
-  },
-  textarea: {
-    borderRadius: "8px",
-    border: "1px solid #E0DBD3",
-    backgroundColor: "#F7F5F2",
-    minHeight: "88px",
-    boxShadow: "none",
-    "::after": {
-      borderBottomWidth: "0",
-    },
-  },
-});
-
 const TELEPHONE_PLACEHOLDER = "Provide a telephone number";
 
 export const StepApplicantAndActivity: React.FC<StepProps> = ({ formData, onChange, readOnly }) => {
-  const styles = useStyles();
+  const styles = useStepStyles();
 
   const set = (path: (data: BuildingApprovalFormData) => void) => {
     const next = JSON.parse(JSON.stringify(formData)) as BuildingApprovalFormData;

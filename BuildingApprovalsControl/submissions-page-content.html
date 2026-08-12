@@ -386,6 +386,7 @@
 </style>
 
 <input type="hidden" id="aal-portal-contact-id" value="{% if user %}{{ user.id }}{% endif %}" />
+<input type="hidden" id="aal-portal-contact-name" value="{% if user %}{{ user.fullname | default: user.fullname }}{% endif %}" />
 <script>
   (function () {
     try {
@@ -394,6 +395,14 @@
       if (/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(raw)) {
         window.__aalPortalContactId = raw;
         sessionStorage.setItem("aal-portal-contact-id", raw);
+      }
+    } catch (e) {}
+    try {
+      var nameEl = document.getElementById("aal-portal-contact-name");
+      var name = nameEl && nameEl.value ? String(nameEl.value).replace(/\s+/g, " ").trim() : "";
+      if (name) {
+        window.__aalPortalContactName = name;
+        sessionStorage.setItem("aal-portal-contact-name", name);
       }
     } catch (e) {}
   })();

@@ -211,3 +211,169 @@ export function resolvePortalContactId(userSettingsUserId?: string | null): stri
 
 export const MISSING_CONTACT_ID_MESSAGE =
   'Signed-in contact id is missing. On Submissions, View Source and confirm #aal-portal-contact-id has a real GUID (not empty). Use {% if user %}<input type="hidden" id="aal-portal-contact-id" value="{{ user.id }}" /><script>window.__aalPortalContactId="{{ user.id }}";</script>{% endif %} then clear portal cache. Sign in as a portal contact — maker preview / anonymous leaves user.id blank.';
+
+const NAME_STORAGE_KEY = "aal-portal-contact-name";
+const NAME_WINDOW_KEY = "__aalPortalContactName";
+const NAME_FALLBACK = "the undersigned";
+
+const NAME_DOM_SELECTORS = [
+  "#aal-portal-contact-name",
+  'input[name="aal-portal-contact-name"]',
+  "[data-aal-portal-contact-name]",
+];
+
+function asDisplayName(raw: string | null | undefined): string | undefined {
+  if (!raw) return undefined;
+  const name = raw.replace(/\s+/g, " ").trim();
+  if (!name || name.toLowerCase() === NAME_FALLBACK) return undefined;
+  return name;
+}
+
+function readNameFromDom(): string | undefined {
+  for (const doc of candidateDocuments()) {
+    for (const selector of NAME_DOM_SELECTORS) {
+      let el: Element | null = null;
+      try {
+        el = doc.querySelector(selector);
+      } catch {
+        continue;
+      }
+      if (!el) continue;
+
+      const inputValue = (el as HTMLInputElement).value;
+      const attrValue = el.getAttribute("value");
+      const dataValue = el.getAttribute("data-aal-portal-contact-name");
+      const textValue = el.textContent;
+      const name = asDisplayName(inputValue ?? attrValue ?? dataValue ?? textValue ?? "");
+      if (name) return name;
+    }
+  }
+  return undefined;
+}
+
+/** Power Pages header typically shows "Signed in as Rick Astley". */
+function readNameFromSignedInAs(): string | undefined {
+  for (const doc of candidateDocuments()) {
+    let text = "";
+    try {
+      text = doc.body?.innerText ?? doc.body?.textContent ?? "";
+    } catch {
+      continue;
+    }
+    const match = /Signed in as\s+([^\n\r|]+)/i.exec(text);
+    const name = asDisplayName(match?.[1]);
+    if (name) return name;
+  }
+  return undefined;
+}
+
+function readNameFromPortalGlobals(): string | undefined {
+  for (const w of candidateWindows()) {
+    try {
+      const portal = w as unknown as {
+        Microsoft?: {
+          Dynamic365?: {
+            Portal?: {
+              User?: {
+                userName?: string;
+                fullName?: string;
+                fullname?: string;
+                firstName?: string;
+                lastName?: string;
+              };
+            };
+          };
+        };
+      };
+      const user = portal.Microsoft?.Dynamic365?.Portal?.User;
+      if (!user) continue;
+
+      const direct =
+        asDisplayName(user.fullName) ??
+        asDisplayName(user.fullname) ??
+        asDisplayName(user.userName);
+      if (direct) return direct;
+
+      const composed = asDisplayName([user.firstName, user.lastName].filter(Boolean).join(" "));
+      if (composed) return composed;
+    } catch {
+      /* cross-origin */
+    }
+  }
+  return undefined;
+}
+
+function readNameFromWindowGlobal(): string | undefined {
+  for (const w of candidateWindows()) {
+    try {
+      const name = asDisplayName((w as unknown as Record<string, unknown>)[NAME_WINDOW_KEY] as string | undefined);
+      if (name) return name;
+    } catch {
+      /* cross-origin */
+    }
+  }
+  return undefined;
+}
+
+function readNameFromSession(): string | undefined {
+  for (const w of candidateWindows()) {
+    try {
+      const name = asDisplayName(w.sessionStorage?.getItem(NAME_STORAGE_KEY));
+      if (name) return name;
+    } catch {
+      /* cross-origin / blocked */
+    }
+  }
+  return undefined;
+}
+
+function stashName(name: string): void {
+  for (const w of candidateWindows()) {
+    try {
+      w.sessionStorage?.setItem(NAME_STORAGE_KEY, name);
+    } catch {
+      /* ignore */
+    }
+    try {
+      (w as unknown as Record<string, unknown>)[NAME_WINDOW_KEY] = name;
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+/**
+ * Display name for the confirmation checkbox on step 3.
+ * Prefer Liquid `#aal-portal-contact-name`, then "Signed in as …" portal chrome,
+ * portal globals, window/session stash. Falls back to "the undersigned".
+ */
+export function resolvePortalContactName(): string {
+  const fromDom = readNameFromDom();
+  if (fromDom) {
+    stashName(fromDom);
+    return fromDom;
+  }
+
+  const fromSignedIn = readNameFromSignedInAs();
+  if (fromSignedIn) {
+    stashName(fromSignedIn);
+    return fromSignedIn;
+  }
+
+  const fromGlobals = readNameFromPortalGlobals();
+  if (fromGlobals) {
+    stashName(fromGlobals);
+    return fromGlobals;
+  }
+
+  const fromWindow = readNameFromWindowGlobal();
+  if (fromWindow) {
+    stashName(fromWindow);
+    return fromWindow;
+  }
+
+  const fromSession = readNameFromSession();
+  if (fromSession) return fromSession;
+
+  return NAME_FALLBACK;
+}
