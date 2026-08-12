@@ -9,7 +9,8 @@ import {
 
 import MovePageToFolderDialog from './dialogs/MovePageToFolderDialog';
 import SitePagesFolderService from './services/SitePagesFolderService';
-import type { ISelectedPageInfo } from './types';
+import SiteSearchService from './services/SiteSearchService';
+import type { IMoveRequest, ISelectedPageInfo } from './types';
 import * as strings from 'MovePageToFolderCommandSetStrings';
 
 export interface IMovePageToFolderCommandSetProperties {
@@ -24,6 +25,7 @@ export default class MovePageToFolderCommandSet extends BaseListViewCommandSet<I
   private _activeDialog: MovePageToFolderDialog | undefined;
   private _folderLoadRequestId: number = 0;
   private _folderService: SitePagesFolderService | undefined;
+  private _siteSearchService: SiteSearchService | undefined;
 
   public onInit(): Promise<void> {
     Log.info(LOG_SOURCE, 'Initialized MovePageToFolderCommandSet');
@@ -75,9 +77,9 @@ export default class MovePageToFolderCommandSet extends BaseListViewCommandSet<I
     moveToFolderCommand.title = strings.MoveToFolderCommand;
 
     const libraryServerRelativeUrl = this._getCurrentLibraryServerRelativeUrl();
-    const selectedPages = this._getSelectedPages();
+    const selectedPage = this._getSelectedPage();
 
-    if (!this._isSitePagesLibrary(libraryServerRelativeUrl) || selectedPages.length === 0) {
+    if (!this._isSitePagesLibrary(libraryServerRelativeUrl) || !selectedPage) {
       if (moveToFolderCommand.visible) {
         moveToFolderCommand.visible = false;
         this.raiseOnChange();
@@ -95,15 +97,17 @@ export default class MovePageToFolderCommandSet extends BaseListViewCommandSet<I
       return;
     }
 
-    const folderService = this._getFolderService(libraryServerRelativeUrl);
-    if (folderService.getCachedFolderTree() !== undefined) {
+    const folderService = this._getFolderService();
+    const normalizedLibraryUrl = this._normalizeServerRelativeUrl(libraryServerRelativeUrl);
+    if (folderService.getCachedFolderTree(normalizedLibraryUrl) !== undefined) {
       return;
     }
 
     const requestId = ++this._folderLoadRequestId;
+    const currentWebAbsoluteUrl = this.context.pageContext.web.absoluteUrl;
 
     folderService
-      .getFolderTree()
+      .getFolderTree(normalizedLibraryUrl, currentWebAbsoluteUrl)
       .catch((error: unknown) => {
         if (this.isDisposed || requestId !== this._folderLoadRequestId) {
           return;
@@ -119,80 +123,53 @@ export default class MovePageToFolderCommandSet extends BaseListViewCommandSet<I
     }
 
     const libraryServerRelativeUrl = this._getCurrentLibraryServerRelativeUrl();
-    const selectedPages = this._getSelectedPages();
-    const currentSiteAbsoluteUrl = this.context.pageContext.web.absoluteUrl;
+    const selectedPage = this._getSelectedPage();
 
-    if (!libraryServerRelativeUrl || !this._isSitePagesLibrary(libraryServerRelativeUrl) || selectedPages.length === 0) {
+    if (!libraryServerRelativeUrl || !this._isSitePagesLibrary(libraryServerRelativeUrl) || !selectedPage) {
       return;
     }
 
-    const folderService = this._getFolderService(libraryServerRelativeUrl, currentSiteAbsoluteUrl);
+    const folderService = this._getFolderService();
+    const siteSearchService = this._getSiteSearchService();
+    const normalizedLibraryUrl = this._normalizeServerRelativeUrl(libraryServerRelativeUrl);
+    const currentWebAbsoluteUrl = this.context.pageContext.web.absoluteUrl;
 
     const dialog = new MovePageToFolderDialog({
-      currentSiteAbsoluteUrl,
-      libraryServerRelativeUrl: folderService.libraryServerRelativeUrl,
-      loadFolders: async (siteAbsoluteUrl: string) => {
-        const normalizedRequestedSite = this._normalizeAbsoluteUrl(siteAbsoluteUrl);
-        const normalizedCurrentSite = this._normalizeAbsoluteUrl(currentSiteAbsoluteUrl);
+      currentLibraryServerRelativeUrl: normalizedLibraryUrl,
+      currentWebAbsoluteUrl,
+      loadFolders: async (webAbsoluteUrl: string, destinationLibraryUrl: string) => {
+        return folderService.getFolderTree(destinationLibraryUrl, webAbsoluteUrl);
+      },
+      loadMatchingFields: async (destinationWebAbsoluteUrl: string) => {
+        return folderService.getMatchingMetadataFields(normalizedLibraryUrl, destinationWebAbsoluteUrl);
+      },
+      onMove: async (request: IMoveRequest) => {
+        const isSameSite = this._normalizeAbsoluteUrl(request.destinationWebAbsoluteUrl).toLowerCase() ===
+          this._normalizeAbsoluteUrl(currentWebAbsoluteUrl).toLowerCase();
 
-        if (normalizedRequestedSite === normalizedCurrentSite) {
-          const currentService = this._getFolderService(
-            libraryServerRelativeUrl,
-            currentSiteAbsoluteUrl
+        if (isSameSite) {
+          await folderService.movePageSameSite(
+            selectedPage.serverRelativeUrl,
+            request.destinationFolderUrl
           );
-          const folders = await currentService.getFolderTree();
-
-          return {
-            folders,
-            libraryServerRelativeUrl: currentService.libraryServerRelativeUrl,
-            webAbsoluteUrl: currentService.webAbsoluteUrl
-          };
+          return;
         }
 
-        return SitePagesFolderService.loadFoldersForSite(this.context, siteAbsoluteUrl);
+        await folderService.movePageCrossSite({
+          destinationFolderUrl: request.destinationFolderUrl,
+          destinationWebAbsoluteUrl: request.destinationWebAbsoluteUrl,
+          page: selectedPage,
+          selectedFieldInternalNames: request.selectedFieldInternalNames,
+          sourceLibraryServerRelativeUrl: normalizedLibraryUrl
+        });
       },
-      onMove: async (
-        destinationFolderUrl: string,
-        siteAbsoluteUrl: string,
-        onProgress?: (fileName: string) => void
-      ) => {
-        const destinationService = await SitePagesFolderService.createForSite(
-          this.context,
-          siteAbsoluteUrl
-        );
-        const moveResult = await destinationService.movePages(
-          selectedPages.map((selectedPage) => selectedPage.serverRelativeUrl),
-          destinationFolderUrl,
-          currentSiteAbsoluteUrl,
-          (fileName: string) => {
-            onProgress?.(fileName);
-          }
-        );
-
-        if (moveResult.failures.length > 0) {
-          const failedDetails = moveResult.failures
-            .map((failure) => failure.message
-              ? `${failure.fileName} (${failure.message})`
-              : failure.fileName)
-            .join('; ');
-          const message = strings.MovePagesPartialError
-            .replace('{0}', String(moveResult.movedCount))
-            .replace('{1}', String(selectedPages.length))
-            .replace('{2}', failedDetails);
-
-          if (moveResult.movedCount === 0) {
-            // Prefer the concrete SharePoint / fallback reason for a total failure.
-            const firstFailureMessage = moveResult.failures[0]?.message?.trim();
-            throw new Error(firstFailureMessage || message);
-          }
-
-          Log.warn(LOG_SOURCE, message);
-          return message;
-        }
-
-        return undefined;
+      page: selectedPage,
+      resolveSitePagesLibraryUrl: async (webAbsoluteUrl: string) => {
+        return siteSearchService.resolveSitePagesLibraryUrl(webAbsoluteUrl);
       },
-      pages: selectedPages
+      searchSites: async (query: string) => {
+        return siteSearchService.searchSites(query);
+      }
     });
 
     this._activeDialog = dialog;
@@ -210,58 +187,37 @@ export default class MovePageToFolderCommandSet extends BaseListViewCommandSet<I
     }
   }
 
-  private _getFolderService(
-    libraryServerRelativeUrl: string,
-    webAbsoluteUrl?: string
-  ): SitePagesFolderService {
-    const normalizedLibraryUrl = this._normalizeServerRelativeUrl(libraryServerRelativeUrl);
-    const normalizedWebUrl = this._normalizeAbsoluteUrl(
-      webAbsoluteUrl ?? this.context.pageContext.web.absoluteUrl
-    );
-
-    if (
-      !this._folderService ||
-      this._folderService.libraryServerRelativeUrl !== normalizedLibraryUrl ||
-      this._folderService.webAbsoluteUrl.toLowerCase() !== normalizedWebUrl
-    ) {
-      this._folderService = new SitePagesFolderService(
-        this.context,
-        normalizedLibraryUrl,
-        normalizedWebUrl
-      );
+  private _getFolderService(): SitePagesFolderService {
+    if (!this._folderService) {
+      this._folderService = new SitePagesFolderService(this.context);
     }
 
     return this._folderService;
   }
 
-  private _getSelectedPages(): ISelectedPageInfo[] {
-    const selectedRows = this.context.listView.selectedRows;
-    if (!selectedRows || selectedRows.length === 0) {
-      return [];
+  private _getSiteSearchService(): SiteSearchService {
+    if (!this._siteSearchService) {
+      this._siteSearchService = new SiteSearchService(this.context);
     }
 
-    const selectedPages: ISelectedPageInfo[] = [];
-
-    for (const selectedRow of selectedRows) {
-      const page = this._tryGetPageFromRow(selectedRow);
-      if (!page) {
-        // Mixed selection (folders / non-pages) — require every row to be a movable page.
-        return [];
-      }
-
-      selectedPages.push(page);
-    }
-
-    return selectedPages;
+    return this._siteSearchService;
   }
 
-  private _tryGetPageFromRow(selectedRow: RowAccessor): ISelectedPageInfo | undefined {
+  private _getSelectedPage(): ISelectedPageInfo | undefined {
+    const selectedRow = this.context.listView.selectedRows?.[0];
+
+    if (!selectedRow) {
+      return undefined;
+    }
+
     const fileName = this._getStringFieldValue(selectedRow, 'FileLeafRef');
     const fileServerRelativeUrl = this._normalizeServerRelativeUrl(
       this._getStringFieldValue(selectedRow, 'FileRef')
     );
     const objectType = this._getStringFieldValue(selectedRow, 'FSObjType') ??
       this._getStringFieldValue(selectedRow, 'FileSystemObjectType');
+    const listItemId = this._getNumberFieldValue(selectedRow, 'ID') ??
+      this._getNumberFieldValue(selectedRow, 'Id');
 
     if (!fileName || !fileServerRelativeUrl) {
       return undefined;
@@ -287,6 +243,7 @@ export default class MovePageToFolderCommandSet extends BaseListViewCommandSet<I
     return {
       currentFolderUrl: fileServerRelativeUrl.substring(0, lastSlashIndex) || '/',
       fileName,
+      listItemId,
       serverRelativeUrl: fileServerRelativeUrl
     };
   }
@@ -301,6 +258,23 @@ export default class MovePageToFolderCommandSet extends BaseListViewCommandSet<I
     return String(value);
   }
 
+  private _getNumberFieldValue(row: RowAccessor, internalName: string): number | undefined {
+    const value = row.getValueByName(internalName);
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === 'string' && value.trim()) {
+      const parsedValue = Number(value);
+      if (Number.isFinite(parsedValue)) {
+        return parsedValue;
+      }
+    }
+
+    return undefined;
+  }
+
   private _getCurrentLibraryServerRelativeUrl(): string | undefined {
     return this.context.listView.list?.serverRelativeUrl ?? this.context.pageContext.list?.serverRelativeUrl;
   }
@@ -311,6 +285,10 @@ export default class MovePageToFolderCommandSet extends BaseListViewCommandSet<I
     }
 
     return this._normalizeServerRelativeUrl(serverRelativeUrl).toLowerCase().endsWith(SITE_PAGES_SEGMENT);
+  }
+
+  private _normalizeAbsoluteUrl(absoluteUrl: string): string {
+    return absoluteUrl.trim().replace(/\/+$/, '');
   }
 
   private _normalizeServerRelativeUrl(serverRelativeUrl: string | undefined): string {
@@ -329,20 +307,6 @@ export default class MovePageToFolderCommandSet extends BaseListViewCommandSet<I
     const normalizedValue = withLeadingSlash.replace(/\/+$/, '');
 
     return normalizedValue || '/';
-  }
-
-  private _normalizeAbsoluteUrl(absoluteUrl: string): string {
-    try {
-      const parsed = new URL(absoluteUrl.trim());
-      const path = this._normalizeServerRelativeUrl(parsed.pathname) || '/';
-      const origin = parsed.protocol === 'http:'
-        ? `https://${parsed.host}`
-        : parsed.origin;
-      const normalized = path === '/' ? origin : `${origin}${path}`;
-      return normalized.toLowerCase();
-    } catch {
-      return absoluteUrl.trim().toLowerCase();
-    }
   }
 
   private _toError(error: unknown, fallbackMessage: string): Error {

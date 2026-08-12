@@ -1,21 +1,22 @@
 import type { ListViewCommandSetContext } from '@microsoft/sp-listview-extensibility';
 import { SPFx, spfi, type SPFI } from '@pnp/sp';
-import { ClientsidePageFromFile } from '@pnp/sp/clientside-pages';
+import type { IFieldInfo } from '@pnp/sp/fields';
 import type { IFolderInfo } from '@pnp/sp/folders';
-import '@pnp/sp/clientside-pages';
 import '@pnp/sp/files';
 import '@pnp/sp/files/web';
 import '@pnp/sp/folders';
 import '@pnp/sp/folders/web';
 import '@pnp/sp/items';
+import '@pnp/sp/lists';
+import '@pnp/sp/fields';
 import '@pnp/sp/webs';
 
+import * as strings from 'MovePageToFolderCommandSetStrings';
 import type {
   IFolderNode,
-  ILoadFoldersResult,
+  IMetadataField,
   IMoveOperationResult,
-  IMovePagesResult,
-  IResolvedSitePagesLibrary
+  ISelectedPageInfo
 } from '../types';
 
 const EXCLUDED_CHILD_FOLDER_NAMES: ReadonlySet<string> = new Set(['forms']);
@@ -23,356 +24,253 @@ const EXCLUDED_ROOT_FOLDER_NAMES: ReadonlySet<string> = new Set([
   'forms',
   'templates'
 ]);
-const SITE_PAGES_SEGMENT: string = 'sitepages';
-const CROSS_SITE_ACCESS_DENIED_MESSAGE: string =
-  'SharePoint blocked moving this page to that site (often because Custom script / ' +
-  'DenyAddAndCustomizePages is blocked on the destination). Allow custom script on the ' +
-  'destination site, or ask a SharePoint admin to set DenyAddAndCustomizePages to false, then try again.';
+
+const EXCLUDED_FIELD_INTERNAL_NAMES: ReadonlySet<string> = new Set([
+  'id',
+  'fileleafref',
+  'fileref',
+  'filedirref',
+  'uniqueid',
+  'guid',
+  'contenttypeid',
+  'checkoutuser',
+  'modified',
+  'created',
+  'editor',
+  'author',
+  'filesystemobjecttype',
+  'fsobjtype',
+  'permalink',
+  'docicon',
+  'edit',
+  'linkfilename',
+  'linkfilename2',
+  'linkfilenamenomenu',
+  'serverurl',
+  'encodedabsurl',
+  'filename',
+  'filesize',
+  'file_x0020_type',
+  'htmldescription',
+  'canvascontent1',
+  'layoutwebpartscontent',
+  'clientformid',
+  'complianceassetid',
+  'owshiddenversion',
+  'scopeid',
+  'workflowversion',
+  'workflowinstanceid',
+  'parentversionstring',
+  'parentleafname',
+  '_uiversionstring',
+  '_uiversion',
+  '_moderationstatus',
+  '_level',
+  '_isrecord',
+  'smlastmodifieddate',
+  'promotedstate'
+]);
+
+const EXCLUDED_FIELD_TYPES: ReadonlySet<string> = new Set([
+  'attachments',
+  'calculated',
+  'computed',
+  'contenttype',
+  'counter',
+  'crossprojectlink',
+  'error',
+  'file',
+  'maxitems',
+  'lookup',
+  'lookupmulti',
+  'taxonomyfieldtype',
+  'taxonomyfieldtypemulti',
+  'user',
+  'usermulti',
+  'workflow',
+  'workflowstatus'
+]);
+
+export interface ICrossSiteMoveParams {
+  destinationFolderUrl: string;
+  destinationWebAbsoluteUrl: string;
+  page: ISelectedPageInfo;
+  selectedFieldInternalNames: string[];
+  sourceLibraryServerRelativeUrl: string;
+}
 
 export default class SitePagesFolderService {
-  public readonly libraryServerRelativeUrl: string;
-  public readonly webAbsoluteUrl: string;
-
   private readonly _context: ListViewCommandSetContext;
-  private readonly _sourceWebAbsoluteUrl: string;
-  private readonly _sp: SPFI;
-  private _folderTreeCache: IFolderNode[] | undefined;
-  private _folderTreePromise: Promise<IFolderNode[]> | undefined;
+  private readonly _sourceSp: SPFI;
+  private readonly _folderTreeCache = new Map<string, IFolderNode[]>();
+  private readonly _folderTreePromises = new Map<string, Promise<IFolderNode[]>>();
 
-  public constructor(
-    context: ListViewCommandSetContext,
-    libraryServerRelativeUrl: string,
-    webAbsoluteUrl?: string
-  ) {
+  public constructor(context: ListViewCommandSetContext) {
     this._context = context;
-    this._sourceWebAbsoluteUrl = this._normalizeAbsoluteUrl(context.pageContext.web.absoluteUrl);
-    this.webAbsoluteUrl = this._normalizeAbsoluteUrl(webAbsoluteUrl ?? this._sourceWebAbsoluteUrl);
-    this.libraryServerRelativeUrl = this._normalizeServerRelativeUrl(libraryServerRelativeUrl);
-    this._sp = spfi(this.webAbsoluteUrl).using(SPFx(context));
+    this._sourceSp = spfi().using(SPFx(context));
   }
 
-  public static async createForSite(
-    context: ListViewCommandSetContext,
-    siteAbsoluteUrl: string
-  ): Promise<SitePagesFolderService> {
-    const resolved = await SitePagesFolderService.resolveSitePagesLibrary(context, siteAbsoluteUrl);
-    return new SitePagesFolderService(
-      context,
-      resolved.libraryServerRelativeUrl,
-      resolved.webAbsoluteUrl
-    );
+  public getCachedFolderTree(libraryServerRelativeUrl: string): IFolderNode[] | undefined {
+    return this._folderTreeCache.get(this._normalizeServerRelativeUrl(libraryServerRelativeUrl));
   }
 
-  public static async resolveSitePagesLibrary(
-    context: ListViewCommandSetContext,
-    siteAbsoluteUrl: string
-  ): Promise<IResolvedSitePagesLibrary> {
-    const webAbsoluteUrl = SitePagesFolderService._normalizeAbsoluteUrlStatic(siteAbsoluteUrl);
-    const sp = spfi(webAbsoluteUrl).using(SPFx(context));
+  public async getFolderTree(
+    libraryServerRelativeUrl: string,
+    webAbsoluteUrl?: string,
+    forceRefresh = false
+  ): Promise<IFolderNode[]> {
+    const normalizedLibraryUrl = this._normalizeServerRelativeUrl(libraryServerRelativeUrl);
+    const cacheKey = this._folderCacheKey(normalizedLibraryUrl, webAbsoluteUrl);
 
-    const web = await sp.web.select('ServerRelativeUrl', 'Url')();
-    const webServerRelativeUrl = SitePagesFolderService._normalizeServerRelativeUrlStatic(
-      web.ServerRelativeUrl
-    );
-    const resolvedWebAbsoluteUrl = SitePagesFolderService._normalizeAbsoluteUrlStatic(
-      web.Url || webAbsoluteUrl
-    );
+    if (!forceRefresh) {
+      const cached = this._folderTreeCache.get(cacheKey);
+      if (cached !== undefined) {
+        return cached;
+      }
 
-    const parsedInput = SitePagesFolderService._tryParseUrlStatic(webAbsoluteUrl);
-    const inputPath = SitePagesFolderService._normalizeServerRelativeUrlStatic(
-      parsedInput?.pathname ?? '/'
-    );
-    const libraryServerRelativeUrl = SitePagesFolderService._resolveLibraryUrlFromInput(
-      webServerRelativeUrl,
-      inputPath
-    );
-
-    try {
-      await sp.web
-        .getFolderByServerRelativePath(libraryServerRelativeUrl)
-        .select('ServerRelativeUrl', 'Exists')();
-    } catch (error: unknown) {
-      throw new Error(
-        error instanceof Error && error.message.trim()
-          ? error.message
-          : 'Site Pages library was not found or is not accessible.'
-      );
+      const inFlight = this._folderTreePromises.get(cacheKey);
+      if (inFlight) {
+        return inFlight;
+      }
     }
 
-    return {
-      libraryServerRelativeUrl,
-      webAbsoluteUrl: resolvedWebAbsoluteUrl,
-      webServerRelativeUrl
-    };
-  }
-
-  public static async loadFoldersForSite(
-    context: ListViewCommandSetContext,
-    siteAbsoluteUrl: string
-  ): Promise<ILoadFoldersResult> {
-    const service = await SitePagesFolderService.createForSite(context, siteAbsoluteUrl);
-    const folders = await service.getFolderTree(true);
-
-    return {
-      folders,
-      libraryServerRelativeUrl: service.libraryServerRelativeUrl,
-      webAbsoluteUrl: service.webAbsoluteUrl
-    };
-  }
-
-  public getCachedFolderTree(): IFolderNode[] | undefined {
-    return this._folderTreeCache;
-  }
-
-  public async getFolderTree(forceRefresh = false): Promise<IFolderNode[]> {
-    if (!forceRefresh && this._folderTreeCache !== undefined) {
-      return this._folderTreeCache;
-    }
-
-    if (!forceRefresh && this._folderTreePromise) {
-      return this._folderTreePromise;
-    }
-
-    this._folderTreePromise = this._loadFolderTree()
+    const loadPromise = this._loadFolderTree(normalizedLibraryUrl, webAbsoluteUrl)
       .then((folders: IFolderNode[]) => {
-        this._folderTreeCache = folders;
+        this._folderTreeCache.set(cacheKey, folders);
         return folders;
       })
       .finally(() => {
-        this._folderTreePromise = undefined;
+        this._folderTreePromises.delete(cacheKey);
       });
 
-    return this._folderTreePromise;
+    this._folderTreePromises.set(cacheKey, loadPromise);
+    return loadPromise;
   }
 
-  public async movePage(
+  public async getMatchingMetadataFields(
+    sourceLibraryServerRelativeUrl: string,
+    destinationWebAbsoluteUrl: string
+  ): Promise<IMetadataField[]> {
+    const sourceSp = this._sourceSp;
+    const destinationSp = this._getSpForWeb(destinationWebAbsoluteUrl);
+
+    const destinationLibraryUrl = await this._resolveSitePagesLibraryUrl(destinationSp);
+    const [sourceFields, destinationFields] = await Promise.all([
+      this._getListFields(sourceSp, sourceLibraryServerRelativeUrl),
+      this._getListFields(destinationSp, destinationLibraryUrl)
+    ]);
+
+    const destinationByInternalName = new Map(
+      destinationFields
+        .filter((field) => this._isEligibleMetadataField(field))
+        .map((field) => [field.InternalName.toLowerCase(), field])
+    );
+
+    const matchingFields: IMetadataField[] = [];
+
+    for (const sourceField of sourceFields) {
+      if (!this._isEligibleMetadataField(sourceField)) {
+        continue;
+      }
+
+      const destinationField = destinationByInternalName.get(sourceField.InternalName.toLowerCase());
+      if (!destinationField) {
+        continue;
+      }
+
+      if (destinationField.TypeAsString.toLowerCase() !== sourceField.TypeAsString.toLowerCase()) {
+        continue;
+      }
+
+      matchingFields.push({
+        displayName: sourceField.Title || sourceField.InternalName,
+        internalName: sourceField.InternalName,
+        typeAsString: sourceField.TypeAsString
+      });
+    }
+
+    matchingFields.sort((left, right) => left.displayName.localeCompare(right.displayName));
+    return matchingFields;
+  }
+
+  public async movePageSameSite(
     pageServerRelativeUrl: string,
-    destinationFolderUrl: string,
-    sourceWebAbsoluteUrl?: string
+    destinationFolderUrl: string
   ): Promise<IMoveOperationResult> {
     const normalizedSourceUrl = this._normalizeServerRelativeUrl(pageServerRelativeUrl);
     const normalizedDestinationFolderUrl = this._normalizeServerRelativeUrl(destinationFolderUrl);
-    const fileName = this._getFileName(normalizedSourceUrl);
-    const destinationFileServerRelativeUrl = `${normalizedDestinationFolderUrl}/${fileName}`;
-    const sourceWebUrl = this._normalizeAbsoluteUrl(sourceWebAbsoluteUrl ?? this._sourceWebAbsoluteUrl);
-    const isSameSite = this._isSameWeb(sourceWebUrl, this.webAbsoluteUrl);
+    const destinationFileUrl = `${normalizedDestinationFolderUrl}/${this._getFileName(normalizedSourceUrl)}`;
 
-    if (isSameSite) {
-      await this._sp.web
-        .getFileByServerRelativePath(normalizedSourceUrl)
-        .moveByPath(destinationFileServerRelativeUrl, true);
-
-      return {
-        destinationFileUrl: destinationFileServerRelativeUrl
-      };
-    }
-
-    const destinationAbsoluteUrl = this._toAbsoluteUrl(
-      this.webAbsoluteUrl,
-      destinationFileServerRelativeUrl
-    );
-    const sourceSp = spfi(sourceWebUrl).using(SPFx(this._context));
-
-    try {
-      await sourceSp.web
-        .getFileByServerRelativePath(normalizedSourceUrl)
-        .moveByPath(destinationAbsoluteUrl, true, {
-          KeepBoth: false,
-          RetainEditorAndModifiedOnMove: true,
-          ShouldBypassSharedLocks: true
-        });
-
-      return {
-        destinationFileUrl: destinationAbsoluteUrl
-      };
-    } catch (moveByPathError: unknown) {
-      // Site Pages (.aspx) often fail MoveCopyUtil when custom script is blocked.
-      // Fall back to modern page API copy + same-site folder move, then delete source.
-      try {
-        return await this._movePageViaClientsideCopy(
-          sourceSp,
-          normalizedSourceUrl,
-          fileName,
-          destinationFileServerRelativeUrl,
-          destinationAbsoluteUrl
-        );
-      } catch (fallbackError: unknown) {
-        throw new Error(this._formatCrossSiteMoveError(moveByPathError, fallbackError));
-      }
-    }
-  }
-
-  public async movePages(
-    pageServerRelativeUrls: string[],
-    destinationFolderUrl: string,
-    sourceWebAbsoluteUrl?: string,
-    onProgress?: (fileName: string, index: number, total: number) => void
-  ): Promise<IMovePagesResult> {
-    const results: IMoveOperationResult[] = [];
-    const failures: IMovePagesResult['failures'] = [];
-    const total = pageServerRelativeUrls.length;
-
-    for (let index = 0; index < pageServerRelativeUrls.length; index++) {
-      const pageServerRelativeUrl = pageServerRelativeUrls[index];
-      const fileName = this._getFileName(this._normalizeServerRelativeUrl(pageServerRelativeUrl));
-      onProgress?.(fileName, index, total);
-
-      try {
-        const result = await this.movePage(
-          pageServerRelativeUrl,
-          destinationFolderUrl,
-          sourceWebAbsoluteUrl
-        );
-        results.push(result);
-      } catch (error: unknown) {
-        const message = error instanceof Error && error.message.trim()
-          ? error.message
-          : 'Move failed.';
-        failures.push({
-          fileName,
-          message
-        });
-      }
-    }
+    await this._sourceSp.web
+      .getFileByServerRelativePath(normalizedSourceUrl)
+      .moveByPath(destinationFileUrl, true);
 
     return {
-      failures,
-      movedCount: results.length,
-      results
+      destinationFileUrl
     };
   }
 
-  private async _movePageViaClientsideCopy(
-    sourceSp: SPFI,
-    sourceServerRelativeUrl: string,
-    fileName: string,
-    destinationFileServerRelativeUrl: string,
-    destinationAbsoluteUrl: string
-  ): Promise<IMoveOperationResult> {
-    const pageName = fileName.replace(/\.aspx$/i, '');
-    const sourcePage = await ClientsidePageFromFile(
-      sourceSp.web.getFileByServerRelativePath(sourceServerRelativeUrl)
-    );
-    const pageTitle = (sourcePage.title || pageName).trim() || pageName;
+  public async movePageCrossSite(params: ICrossSiteMoveParams): Promise<IMoveOperationResult> {
+    const destinationSp = this._getSpForWeb(params.destinationWebAbsoluteUrl);
+    const normalizedSourceUrl = this._normalizeServerRelativeUrl(params.page.serverRelativeUrl);
+    const normalizedDestinationFolderUrl = this._normalizeServerRelativeUrl(params.destinationFolderUrl);
+    const destinationFileUrl = `${normalizedDestinationFolderUrl}/${params.page.fileName}`;
 
-    const destinationPage = await sourcePage.copy(
-      this._sp.web,
-      pageName,
-      pageTitle,
-      true
+    const selectedFields = Array.from(
+      new Set(params.selectedFieldInternalNames.map((name) => name.trim()).filter(Boolean))
     );
 
-    const destinationItem = await destinationPage.getItem<{
-      FileRef?: string;
-    }>('FileRef', 'FileLeafRef');
-    const createdFileServerRelativeUrl = this._normalizeServerRelativeUrl(
-      destinationItem.FileRef || `${this.libraryServerRelativeUrl}/${fileName}`
-    );
+    let sourceValues: Record<string, unknown> = {};
+    if (selectedFields.length > 0) {
+      const listItemId = params.page.listItemId ??
+        await this._resolveListItemId(normalizedSourceUrl);
 
-    if (createdFileServerRelativeUrl.toLowerCase() !== destinationFileServerRelativeUrl.toLowerCase()) {
-      await this._sp.web
-        .getFileByServerRelativePath(createdFileServerRelativeUrl)
-        .moveByPath(destinationFileServerRelativeUrl, true);
+      sourceValues = await this._getSourceFieldValues(
+        params.sourceLibraryServerRelativeUrl,
+        listItemId,
+        selectedFields
+      );
+    }
+
+    await this._sourceSp.web
+      .getFileByServerRelativePath(normalizedSourceUrl)
+      .copyByPath(destinationFileUrl, true);
+
+    if (selectedFields.length > 0) {
+      const updatePayload = this._buildUpdatePayload(sourceValues, selectedFields);
+      if (Object.keys(updatePayload).length > 0) {
+        const destinationItem = await destinationSp.web
+          .getFileByServerRelativePath(destinationFileUrl)
+          .getItem();
+        await destinationItem.update(updatePayload);
+      }
     }
 
     try {
-      await sourcePage.delete();
+      await this._sourceSp.web.getFileByServerRelativePath(normalizedSourceUrl).recycle();
     } catch {
-      // Destination succeeded; source cleanup is best-effort.
+      throw new Error(strings.CrossSiteDeleteFailedError);
     }
 
     return {
-      destinationFileUrl: destinationAbsoluteUrl
+      destinationFileUrl
     };
   }
 
-  private _formatCrossSiteMoveError(primaryError: unknown, fallbackError: unknown): string {
-    const primaryMessage = this._extractSharePointErrorMessage(primaryError);
-    const fallbackMessage = this._extractSharePointErrorMessage(fallbackError);
-
-    if (this._isAccessDeniedError(primaryError) || this._isAccessDeniedError(fallbackError)) {
-      return CROSS_SITE_ACCESS_DENIED_MESSAGE;
-    }
-
-    const detail = fallbackMessage || primaryMessage;
-    return detail
-      ? `We couldn't move the page to that site. ${detail}`
-      : 'We couldn\'t move the page to that site.';
+  private async _loadFolderTree(
+    libraryServerRelativeUrl: string,
+    webAbsoluteUrl?: string
+  ): Promise<IFolderNode[]> {
+    const sp = webAbsoluteUrl ? this._getSpForWeb(webAbsoluteUrl) : this._sourceSp;
+    return this._loadChildFolders(sp, libraryServerRelativeUrl, 0);
   }
 
-  private _extractSharePointErrorMessage(error: unknown): string | undefined {
-    if (!(error instanceof Error) || !error.message.trim()) {
-      return typeof error === 'string' && error.trim() ? error.trim() : undefined;
-    }
-
-    const rawMessage = error.message.trim();
-    const payloadMarker = '::>';
-    const payloadIndex = rawMessage.indexOf(payloadMarker);
-    const payloadText = payloadIndex >= 0
-      ? rawMessage.slice(payloadIndex + payloadMarker.length).trim()
-      : rawMessage;
-
-    try {
-      const parsed = JSON.parse(payloadText) as {
-        'odata.error'?: {
-          message?: {
-            value?: string;
-          };
-        };
-        error?: {
-          message?: string;
-        };
-        message?: string | {
-          value?: string;
-        };
-      };
-
-      const odataValue = parsed['odata.error']?.message?.value;
-      if (odataValue?.trim()) {
-        return odataValue.trim();
-      }
-
-      if (typeof parsed.error?.message === 'string' && parsed.error.message.trim()) {
-        return parsed.error.message.trim();
-      }
-
-      if (typeof parsed.message === 'string' && parsed.message.trim()) {
-        return parsed.message.trim();
-      }
-
-      if (parsed.message && typeof parsed.message === 'object' && parsed.message.value?.trim()) {
-        return parsed.message.value.trim();
-      }
-    } catch {
-      // Not JSON — fall through to cleaned raw text.
-    }
-
-    const cleaned = payloadText
-      .replace(/^Error making HttpClient request in queryable\s*\[[^\]]*\]\s*[^=]*::>\s*/i, '')
-      .trim();
-
-    return cleaned || rawMessage;
-  }
-
-  private _isAccessDeniedError(error: unknown): boolean {
-    const message = (
-      this._extractSharePointErrorMessage(error) ||
-      (error instanceof Error ? error.message : String(error ?? ''))
-    ).toLowerCase();
-
-    return message.includes('access denied') ||
-      message.includes('unauthorized') ||
-      message.includes('403') ||
-      message.includes('denyaddandcustomizepages') ||
-      message.includes('add and customize pages');
-  }
-
-  private async _loadFolderTree(): Promise<IFolderNode[]> {
-    return this._loadChildFolders(this.libraryServerRelativeUrl, 0);
-  }
-
-  private async _loadChildFolders(parentFolderUrl: string, depth: number): Promise<IFolderNode[]> {
-    const folders: IFolderInfo[] = await this._sp.web
+  private async _loadChildFolders(
+    sp: SPFI,
+    parentFolderUrl: string,
+    depth: number
+  ): Promise<IFolderNode[]> {
+    const folders: IFolderInfo[] = await sp.web
       .getFolderByServerRelativePath(this._normalizeServerRelativeUrl(parentFolderUrl))
       .folders();
 
@@ -386,7 +284,7 @@ export default class SitePagesFolderService {
       let children: IFolderNode[] = [];
 
       try {
-        children = await this._loadChildFolders(folder.ServerRelativeUrl, depth + 1);
+        children = await this._loadChildFolders(sp, folder.ServerRelativeUrl, depth + 1);
       } catch {
         children = [];
       }
@@ -399,6 +297,109 @@ export default class SitePagesFolderService {
     }
 
     return childNodes;
+  }
+
+  private async _getListFields(sp: SPFI, libraryServerRelativeUrl: string): Promise<IFieldInfo[]> {
+    return sp.web.getList(this._normalizeServerRelativeUrl(libraryServerRelativeUrl)).fields();
+  }
+
+  private async _resolveSitePagesLibraryUrl(sp: SPFI): Promise<string> {
+    const web = await sp.web.select('ServerRelativeUrl')();
+    const libraryServerRelativeUrl = `${this._normalizeServerRelativeUrl(web.ServerRelativeUrl)}/SitePages`;
+
+    try {
+      await sp.web.getFolderByServerRelativePath(libraryServerRelativeUrl).select('Name')();
+      return libraryServerRelativeUrl;
+    } catch {
+      throw new Error(strings.SitePagesLibraryMissingError);
+    }
+  }
+
+  private async _resolveListItemId(pageServerRelativeUrl: string): Promise<number> {
+    const item = await this._sourceSp.web
+      .getFileByServerRelativePath(pageServerRelativeUrl)
+      .getItem<{ Id: number }>('Id');
+
+    if (!item?.Id || !Number.isFinite(item.Id)) {
+      throw new Error(strings.MovePageError);
+    }
+
+    return item.Id;
+  }
+
+  private async _getSourceFieldValues(
+    sourceLibraryServerRelativeUrl: string,
+    listItemId: number,
+    fieldInternalNames: string[]
+  ): Promise<Record<string, unknown>> {
+    const selectFields = Array.from(new Set(['Id', ...fieldInternalNames]));
+    const item = await this._sourceSp.web
+      .getList(this._normalizeServerRelativeUrl(sourceLibraryServerRelativeUrl))
+      .items
+      .getById(listItemId)
+      .select(...selectFields)();
+
+    return item as Record<string, unknown>;
+  }
+
+  private _buildUpdatePayload(
+    sourceValues: Record<string, unknown>,
+    selectedFieldInternalNames: string[]
+  ): Record<string, unknown> {
+    const payload: Record<string, unknown> = {};
+
+    for (const internalName of selectedFieldInternalNames) {
+      if (!(internalName in sourceValues)) {
+        continue;
+      }
+
+      const value = sourceValues[internalName];
+      if (value === undefined) {
+        continue;
+      }
+
+      payload[internalName] = value;
+    }
+
+    return payload;
+  }
+
+  private _isEligibleMetadataField(field: IFieldInfo): boolean {
+    const internalName = (field.InternalName || '').trim();
+    if (!internalName) {
+      return false;
+    }
+
+    const normalizedInternalName = internalName.toLowerCase();
+    if (normalizedInternalName.startsWith('_')) {
+      return false;
+    }
+
+    if (field.Hidden || field.ReadOnlyField) {
+      return false;
+    }
+
+    if (EXCLUDED_FIELD_INTERNAL_NAMES.has(normalizedInternalName)) {
+      return false;
+    }
+
+    const typeAsString = (field.TypeAsString || '').trim().toLowerCase();
+    if (!typeAsString || EXCLUDED_FIELD_TYPES.has(typeAsString)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private _getSpForWeb(webAbsoluteUrl: string): SPFI {
+    return spfi(this._normalizeAbsoluteUrl(webAbsoluteUrl)).using(SPFx(this._context));
+  }
+
+  private _folderCacheKey(libraryServerRelativeUrl: string, webAbsoluteUrl?: string): string {
+    const webKey = webAbsoluteUrl
+      ? this._normalizeAbsoluteUrl(webAbsoluteUrl).toLowerCase()
+      : 'current';
+    return `${webKey}|${libraryServerRelativeUrl.toLowerCase()}`;
   }
 
   private _getFileName(fileServerRelativeUrl: string): string {
@@ -416,77 +417,11 @@ export default class SitePagesFolderService {
     return !EXCLUDED_CHILD_FOLDER_NAMES.has(normalizedName);
   }
 
-  private _isSameWeb(leftAbsoluteUrl: string, rightAbsoluteUrl: string): boolean {
-    return this._normalizeAbsoluteUrl(leftAbsoluteUrl).toLowerCase() ===
-      this._normalizeAbsoluteUrl(rightAbsoluteUrl).toLowerCase();
-  }
-
-  private _toAbsoluteUrl(webAbsoluteUrl: string, serverRelativeUrl: string): string {
-    const parsedWeb = this._tryParseUrl(webAbsoluteUrl);
-    if (!parsedWeb) {
-      throw new Error('Invalid site URL.');
-    }
-
-    const normalizedPath = this._normalizeServerRelativeUrl(serverRelativeUrl);
-    return `${parsedWeb.origin}${normalizedPath}`;
-  }
-
   private _normalizeAbsoluteUrl(absoluteUrl: string): string {
-    return SitePagesFolderService._normalizeAbsoluteUrlStatic(absoluteUrl);
+    return absoluteUrl.trim().replace(/\/+$/, '');
   }
 
   private _normalizeServerRelativeUrl(serverRelativeUrl: string): string {
-    return SitePagesFolderService._normalizeServerRelativeUrlStatic(serverRelativeUrl);
-  }
-
-  private _tryParseUrl(value: string): URL | undefined {
-    return SitePagesFolderService._tryParseUrlStatic(value);
-  }
-
-  private static _resolveLibraryUrlFromInput(
-    webServerRelativeUrl: string,
-    inputPath: string
-  ): string {
-    const normalizedWebUrl = this._normalizeServerRelativeUrlStatic(webServerRelativeUrl);
-    const normalizedInputPath = this._normalizeServerRelativeUrlStatic(inputPath).toLowerCase();
-    const webPrefix = normalizedWebUrl.toLowerCase();
-
-    if (
-      normalizedInputPath === `${webPrefix}/${SITE_PAGES_SEGMENT}` ||
-      normalizedInputPath.endsWith(`/${SITE_PAGES_SEGMENT}`)
-    ) {
-      if (normalizedInputPath.startsWith(webPrefix)) {
-        return this._normalizeServerRelativeUrlStatic(inputPath);
-      }
-    }
-
-    if (normalizedWebUrl === '/') {
-      return '/SitePages';
-    }
-
-    return `${normalizedWebUrl}/SitePages`;
-  }
-
-  private static _normalizeAbsoluteUrlStatic(absoluteUrl: string): string {
-    const trimmedValue = absoluteUrl.trim();
-    const parsed = this._tryParseUrlStatic(trimmedValue);
-
-    if (!parsed || (parsed.protocol !== 'https:' && parsed.protocol !== 'http:')) {
-      throw new Error('Enter a valid HTTPS SharePoint site URL.');
-    }
-
-    // Prefer https for SharePoint Online destinations.
-    if (parsed.protocol === 'http:') {
-      parsed.protocol = 'https:';
-    }
-
-    const path = this._normalizeServerRelativeUrlStatic(parsed.pathname);
-    return path === '/'
-      ? parsed.origin
-      : `${parsed.origin}${path}`;
-  }
-
-  private static _normalizeServerRelativeUrlStatic(serverRelativeUrl: string): string {
     const trimmedValue = serverRelativeUrl.trim();
 
     if (!trimmedValue) {
@@ -499,13 +434,5 @@ export default class SitePagesFolderService {
     const normalizedValue = withLeadingSlash.replace(/\/+$/, '');
 
     return normalizedValue || '/';
-  }
-
-  private static _tryParseUrlStatic(value: string): URL | undefined {
-    try {
-      return new URL(value);
-    } catch {
-      return undefined;
-    }
   }
 }

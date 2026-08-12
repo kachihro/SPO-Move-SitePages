@@ -8,27 +8,31 @@
     "skipFeatureDeployment": true,
     "isDomainIsolated": false,
     "developer": {
-      "name": "",
-      "websiteUrl": "",
-      "privacyUrl": "",
-      "termsOfUseUrl": "",
+      "name": "Kachihro",
+      "websiteUrl": "https://www.kachihro.com",
+      "privacyUrl": "https://www.kachihro.com",
+      "termsOfUseUrl": "https://www.kachihro.com",
       "mpnId": "Undefined-1.23.0"
     },
     "metadata": {
       "shortDescription": {
-        "default": "sitepages-page-move-extension-123 description"
+        "default": "Move Site Pages into folders from the Site Pages library with a searchable folder picker."
       },
       "longDescription": {
-        "default": "sitepages-page-move-extension-123 description"
+        "default": "SPFx List View Command Set for SharePoint Online Site Pages. Select a modern page, open Move to folder, browse or search the Site Pages folder tree, and move the page with PnPjs. Built by Kachihro (https://www.kachihro.com)."
       },
-      "screenshotPaths": [],
+      "screenshotPaths": [
+        "../assets/move-page-to-folder-dialog.png"
+      ],
       "videoUrl": "",
-      "categories": []
+      "categories": [
+        "Content Management"
+      ]
     },
     "features": [
       {
-        "title": "Application Extension - Deployment of custom action",
-        "description": "Deploys a custom action with ClientSideComponentId association",
+        "title": "Site Pages Move to Folder — List View Command Set",
+        "description": "Deploys the Move to folder command set for the Site Pages library.",
         "id": "44ac2ad2-e042-4638-a798-1dee4e70ba97",
         "version": "1.0.0.0",
         "assets": {

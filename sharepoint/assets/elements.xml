@@ -4,14 +4,6 @@
         Title="MovePageToFolder"
         RegistrationId="119"
         RegistrationType="List"
-        Location="ClientSideExtension.ListViewCommandSet.CommandBar"
-        ClientSideComponentId="9059cbd7-7e32-4692-9bfc-7898d89ffaf7"
-        ClientSideComponentProperties="{}">
-    </CustomAction>
-    <CustomAction
-        Title="MovePageToFolder"
-        RegistrationId="119"
-        RegistrationType="List"
         Location="ClientSideExtension.ListViewCommandSet.ContextMenu"
         ClientSideComponentId="9059cbd7-7e32-4692-9bfc-7898d89ffaf7"
         ClientSideComponentProperties="{}">

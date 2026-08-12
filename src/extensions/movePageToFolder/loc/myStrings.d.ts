@@ -1,13 +1,11 @@
 declare interface IMovePageToFolderCommandSetStrings {
   MoveToFolderCommand: string;
   DialogTitle: string;
-  DialogTitleMultiple: string;
-  SelectedPagesLabel: string;
-  SelectedPagesCountLabel: string;
   CurrentFolderLabel: string;
   AvailableFoldersLabel: string;
   AvailableFoldersHint: string;
   SelectedFolderLabel: string;
+  SelectedSiteLabel: string;
   NoFolderSelectedLabel: string;
   CancelButton: string;
   MoveButton: string;
@@ -18,22 +16,23 @@ declare interface IMovePageToFolderCommandSetStrings {
   SearchFoldersPlaceholder: string;
   NoMatchingFoldersMessage: string;
   SameFolderMessage: string;
-  SameFolderMessageMultiple: string;
   LoadFoldersError: string;
   MovePageError: string;
-  MovePagesPartialError: string;
   SitePagesRootLabel: string;
-  DestinationSiteLabel: string;
-  DestinationSitePlaceholder: string;
-  LoadSiteButton: string;
-  LoadSiteButtonAriaLabel: string;
-  LoadingSiteLabel: string;
-  ConfirmSitePromptMessage: string;
-  InvalidSiteUrlMessage: string;
-  LoadSiteError: string;
-  SiteNotFoundOrNoAccessMessage: string;
-  CrossSiteMoveError: string;
-  CrossSiteAccessDeniedMessage: string;
+  ThisSiteLabel: string;
+  SearchSitesPlaceholder: string;
+  SearchSitesLabel: string;
+  NoMatchingSitesMessage: string;
+  LoadSitesError: string;
+  SitePagesLibraryMissingError: string;
+  MetadataSectionLabel: string;
+  MetadataSectionHint: string;
+  SelectAllMetadataLabel: string;
+  ClearMetadataLabel: string;
+  LoadingMetadataLabel: string;
+  NoMatchingMetadataMessage: string;
+  LoadMetadataError: string;
+  CrossSiteDeleteFailedError: string;
 }
 
 declare module 'MovePageToFolderCommandSetStrings' {

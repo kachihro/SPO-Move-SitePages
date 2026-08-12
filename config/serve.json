@@ -7,26 +7,23 @@
       "pageUrl": "https://{tenantDomain}/SitePages/Forms/ByAuthor.aspx",
       "customActions": {
         "9059cbd7-7e32-4692-9bfc-7898d89ffaf7": {
-          "location": "ClientSideExtension.ListViewCommandSet.CommandBar",
-          "properties": {}
+          "location": "ClientSideExtension.ListViewCommandSet.ContextMenu",
+          "properties": {
+            "sampleTextOne": "One item is selected in the list",
+            "sampleTextTwo": "This command is always visible."
+          }
         }
       }
     },
-    "movePageToFolderCommandBar": {
-      "pageUrl": "https://{tenantDomain}/SitePages/Forms/ByAuthor.aspx",
-      "customActions": {
-        "9059cbd7-7e32-4692-9bfc-7898d89ffaf7": {
-          "location": "ClientSideExtension.ListViewCommandSet.CommandBar",
-          "properties": {}
-        }
-      }
-    },
-    "movePageToFolderContextMenu": {
+    "movePageToFolder": {
       "pageUrl": "https://{tenantDomain}/SitePages/Forms/ByAuthor.aspx",
       "customActions": {
         "9059cbd7-7e32-4692-9bfc-7898d89ffaf7": {
           "location": "ClientSideExtension.ListViewCommandSet.ContextMenu",
-          "properties": {}
+          "properties": {
+            "sampleTextOne": "One item is selected in the list",
+            "sampleTextTwo": "This command is always visible."
+          }
         }
       }
     }

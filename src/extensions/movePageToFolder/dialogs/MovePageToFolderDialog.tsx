@@ -1,8 +1,9 @@
 import {
   Button,
+  Checkbox,
+  Combobox,
   FluentProvider,
-  Input,
-  Label,
+  Option,
   SearchBox,
   Spinner,
   Tree,
@@ -12,14 +13,24 @@ import {
   mergeClasses,
   webLightTheme
 } from '@fluentui/react-components';
-import type { TreeOpenChangeData, TreeOpenChangeEvent } from '@fluentui/react-components';
+import type {
+  ComboboxProps,
+  TreeOpenChangeData,
+  TreeOpenChangeEvent
+} from '@fluentui/react-components';
 import { FolderOpenRegular, FolderRegular } from '@fluentui/react-icons';
 import { BaseDialog } from '@microsoft/sp-dialog';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 
 import * as strings from 'MovePageToFolderCommandSetStrings';
-import type { IFolderNode, ILoadFoldersResult, ISelectedPageInfo } from '../types';
+import type {
+  IFolderNode,
+  IMetadataField,
+  IMoveRequest,
+  ISelectedPageInfo,
+  ISiteOption
+} from '../types';
 
 const useStyles = makeStyles({
   provider: {
@@ -49,6 +60,11 @@ const useStyles = makeStyles({
     borderRadius: '8px',
     padding: '16px 18px'
   },
+  summaryStack: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px'
+  },
   label: {
     color: '#616161',
     fontSize: '12px',
@@ -62,25 +78,25 @@ const useStyles = makeStyles({
     lineHeight: '20px',
     wordBreak: 'break-word'
   },
-  folderPicker: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px'
+  sectionTitle: {
+    fontSize: '16px',
+    fontWeight: '600',
+    lineHeight: '24px'
+  },
+  sectionCaption: {
+    color: '#616161',
+    fontSize: '12px',
+    lineHeight: '16px'
   },
   sitePicker: {
     display: 'flex',
     flexDirection: 'column',
     gap: '8px'
   },
-  siteRow: {
-    alignItems: 'center',
+  folderPicker: {
     display: 'flex',
-    flexWrap: 'wrap',
-    gap: '8px'
-  },
-  siteInput: {
-    flex: '1 1 280px',
-    minWidth: '200px'
+    flexDirection: 'column',
+    gap: '12px'
   },
   searchBox: {
     width: '100%',
@@ -90,7 +106,7 @@ const useStyles = makeStyles({
     backgroundColor: '#ffffff',
     border: '1px solid #d1d1d1',
     borderRadius: '10px',
-    height: '380px',
+    height: '320px',
     overflowY: 'auto',
     padding: '12px 16px'
   },
@@ -166,6 +182,45 @@ const useStyles = makeStyles({
     color: '#a4262c',
     padding: '12px 14px'
   },
+  metadataSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px'
+  },
+  metadataHeader: {
+    alignItems: 'flex-start',
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '12px',
+    justifyContent: 'space-between'
+  },
+  metadataActions: {
+    display: 'flex',
+    gap: '8px'
+  },
+  metadataList: {
+    backgroundColor: '#ffffff',
+    border: '1px solid #d1d1d1',
+    borderRadius: '10px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    maxHeight: '220px',
+    overflowY: 'auto',
+    padding: '12px 14px'
+  },
+  metadataItem: {
+    alignItems: 'flex-start',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px'
+  },
+  metadataInternalName: {
+    color: '#616161',
+    fontSize: '12px',
+    lineHeight: '16px',
+    paddingLeft: '26px'
+  },
   footer: {
     alignItems: 'center',
     borderTop: '1px solid #f0f0f0',
@@ -174,39 +229,31 @@ const useStyles = makeStyles({
     justifyContent: 'space-between',
     paddingTop: '4px'
   },
-  movingStatus: {
-    alignItems: 'center',
-    color: '#616161',
-    display: 'flex',
-    flex: '1 1 auto',
-    fontSize: '13px',
-    gap: '8px',
-    lineHeight: '18px',
-    minWidth: 0
-  },
-  movingStatusText: {
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap'
-  },
   buttonRow: {
     display: 'flex',
-    flexShrink: 0,
     gap: '8px',
     justifyContent: 'flex-end'
+  },
+  movingStatus: {
+    alignItems: 'center',
+    display: 'flex',
+    gap: '8px'
+  },
+  movingStatusText: {
+    color: '#616161',
+    fontSize: '13px'
   }
 });
 
 export interface IMovePageToFolderDialogProps {
-  currentSiteAbsoluteUrl: string;
-  libraryServerRelativeUrl: string;
-  loadFolders: (siteAbsoluteUrl: string) => Promise<ILoadFoldersResult>;
-  onMove: (
-    destinationFolderUrl: string,
-    siteAbsoluteUrl: string,
-    onProgress?: (fileName: string) => void
-  ) => Promise<string | undefined>;
-  pages: ISelectedPageInfo[];
+  currentLibraryServerRelativeUrl: string;
+  currentWebAbsoluteUrl: string;
+  loadFolders: (webAbsoluteUrl: string, libraryServerRelativeUrl: string) => Promise<IFolderNode[]>;
+  loadMatchingFields: (destinationWebAbsoluteUrl: string) => Promise<IMetadataField[]>;
+  onMove: (request: IMoveRequest) => Promise<void>;
+  page: ISelectedPageInfo;
+  resolveSitePagesLibraryUrl: (webAbsoluteUrl: string) => Promise<string>;
+  searchSites: (query: string) => Promise<ISiteOption[]>;
 }
 
 interface IMovePageToFolderDialogContentProps extends IMovePageToFolderDialogProps {
@@ -221,11 +268,6 @@ interface IFolderTreeNodeProps {
   selectedFolderUrl: string | undefined;
 }
 
-interface ISiteLoadRequest {
-  nonce: number;
-  url: string;
-}
-
 function FolderTreeNode(props: IFolderTreeNodeProps): React.ReactElement {
   const { classes, level, node, onSelect, selectedFolderUrl } = props;
   const isSelected = selectedFolderUrl === node.serverRelativeUrl;
@@ -237,15 +279,12 @@ function FolderTreeNode(props: IFolderTreeNodeProps): React.ReactElement {
   ): void => {
     const eventTarget = event.target as HTMLElement | null;
 
-    // Expand chevron lives inside TreeItemLayout; do not intercept those clicks.
-    // Leaf rows use a spacer in the same slot — still allow selection there.
     if (!isLeaf && eventTarget?.closest('.fui-TreeItemLayout__expandIcon')) {
       return;
     }
 
     const currentTarget = event.currentTarget;
 
-    // Select on the row content only; prevent Fluent from also toggling expand on row click.
     event.preventDefault();
     event.stopPropagation();
     onSelect(node.serverRelativeUrl);
@@ -323,96 +362,125 @@ function MovePageToFolderDialogContent(
   props: IMovePageToFolderDialogContentProps
 ): React.ReactElement {
   const {
-    currentSiteAbsoluteUrl,
-    libraryServerRelativeUrl,
+    currentLibraryServerRelativeUrl,
+    currentWebAbsoluteUrl,
     loadFolders,
+    loadMatchingFields,
     onDismiss,
     onMove,
-    pages
+    page,
+    resolveSitePagesLibraryUrl,
+    searchSites
   } = props;
   const classes = useStyles();
-  const isMultiplePages = pages.length > 1;
-  const sharedCurrentFolderUrl = React.useMemo(() => {
-    if (pages.length === 0) {
-      return libraryServerRelativeUrl;
-    }
 
-    const firstFolderUrl = pages[0].currentFolderUrl;
-    return pages.every((selectedPage) => selectedPage.currentFolderUrl === firstFolderUrl)
-      ? firstFolderUrl
-      : libraryServerRelativeUrl;
-  }, [libraryServerRelativeUrl, pages]);
-  const dialogTitle = isMultiplePages
-    ? `${strings.DialogTitleMultiple} - ${strings.SelectedPagesCountLabel.replace('{0}', String(pages.length))}`
-    : `${strings.DialogTitle} - ${pages[0]?.fileName ?? ''}`.trim();
-  const selectedPagesSummary = isMultiplePages
-    ? pages.map((selectedPage) => selectedPage.fileName).join(', ')
-    : undefined;
-  const [siteUrlDraft, setSiteUrlDraft] = React.useState<string>(currentSiteAbsoluteUrl);
-  const [siteLoadRequest, setSiteLoadRequest] = React.useState<ISiteLoadRequest | undefined>(
-    undefined
-  );
-  const [loadedSiteAbsoluteUrl, setLoadedSiteAbsoluteUrl] = React.useState<string | undefined>(
-    undefined
-  );
-  const [activeLibraryServerRelativeUrl, setActiveLibraryServerRelativeUrl] = React.useState<string>(
-    libraryServerRelativeUrl
-  );
-  const normalizedLibraryUrl = React.useMemo(
-    () => normalizeServerRelativeUrl(activeLibraryServerRelativeUrl),
-    [activeLibraryServerRelativeUrl]
+  const currentSiteOption = React.useMemo<ISiteOption>(() => ({
+    absoluteUrl: normalizeAbsoluteUrl(currentWebAbsoluteUrl),
+    isCurrentSite: true,
+    serverRelativeUrl: '/',
+    title: strings.ThisSiteLabel
+  }), [currentWebAbsoluteUrl]);
+
+  const [selectedSite, setSelectedSite] = React.useState<ISiteOption>(currentSiteOption);
+  const [siteQuery, setSiteQuery] = React.useState<string>('');
+  const [siteOptions, setSiteOptions] = React.useState<ISiteOption[]>([currentSiteOption]);
+  const [isSearchingSites, setIsSearchingSites] = React.useState<boolean>(false);
+  const [siteSearchError, setSiteSearchError] = React.useState<string | undefined>(undefined);
+
+  const [libraryServerRelativeUrl, setLibraryServerRelativeUrl] = React.useState<string>(
+    normalizeServerRelativeUrl(currentLibraryServerRelativeUrl)
   );
   const [folders, setFolders] = React.useState<IFolderNode[] | undefined>(undefined);
-  const [isLoadingFolders, setIsLoadingFolders] = React.useState<boolean>(false);
+  const [isLoadingFolders, setIsLoadingFolders] = React.useState<boolean>(true);
   const [loadError, setLoadError] = React.useState<string | undefined>(undefined);
   const [selectedFolderUrl, setSelectedFolderUrl] = React.useState<string | undefined>(undefined);
-  const [isMoving, setIsMoving] = React.useState<boolean>(false);
-  const [movingPageName, setMovingPageName] = React.useState<string | undefined>(undefined);
-  const [moveError, setMoveError] = React.useState<string | undefined>(undefined);
-  const [showSameFolderMessage, setShowSameFolderMessage] = React.useState<boolean>(false);
   const [folderSearchQuery, setFolderSearchQuery] = React.useState<string>('');
   const [openItems, setOpenItems] = React.useState<string[]>([]);
 
-  React.useEffect(() => {
-    if (!siteLoadRequest) {
-      return;
-    }
+  const [matchingFields, setMatchingFields] = React.useState<IMetadataField[]>([]);
+  const [selectedFieldNames, setSelectedFieldNames] = React.useState<string[]>([]);
+  const [isLoadingMetadata, setIsLoadingMetadata] = React.useState<boolean>(false);
+  const [metadataError, setMetadataError] = React.useState<string | undefined>(undefined);
 
+  const [isMoving, setIsMoving] = React.useState<boolean>(false);
+  const [moveError, setMoveError] = React.useState<string | undefined>(undefined);
+  const [showSameFolderMessage, setShowSameFolderMessage] = React.useState<boolean>(false);
+
+  const isCrossSite = normalizeAbsoluteUrl(selectedSite.absoluteUrl).toLowerCase() !==
+    normalizeAbsoluteUrl(currentWebAbsoluteUrl).toLowerCase();
+
+  React.useEffect(() => {
+    let isMounted = true;
+    const handle = window.setTimeout(() => {
+      const runSearch = async (): Promise<void> => {
+        setIsSearchingSites(true);
+        setSiteSearchError(undefined);
+
+        try {
+          const results = await searchSites(siteQuery);
+          if (!isMounted) {
+            return;
+          }
+
+          setSiteOptions(results.length > 0 ? results : [currentSiteOption]);
+        } catch (error: unknown) {
+          if (!isMounted) {
+            return;
+          }
+
+          setSiteSearchError(getErrorMessage(error, strings.LoadSitesError));
+          setSiteOptions([currentSiteOption]);
+        }
+
+        if (isMounted) {
+          setIsSearchingSites(false);
+        }
+      };
+
+      runSearch().catch(() => undefined);
+    }, siteQuery.trim() ? 300 : 0);
+
+    return () => {
+      isMounted = false;
+      window.clearTimeout(handle);
+    };
+  }, [currentSiteOption, searchSites, siteQuery]);
+
+  React.useEffect(() => {
     let isMounted = true;
 
-    const run = async (): Promise<void> => {
+    const loadDestinationFolders = async (): Promise<void> => {
       setIsLoadingFolders(true);
       setLoadError(undefined);
+      setSelectedFolderUrl(undefined);
+      setShowSameFolderMessage(false);
+      setMoveError(undefined);
+      setFolderSearchQuery('');
 
       try {
-        const result = await loadFolders(siteLoadRequest.url);
+        const destinationLibraryUrl = selectedSite.isCurrentSite
+          ? normalizeServerRelativeUrl(currentLibraryServerRelativeUrl)
+          : await resolveSitePagesLibraryUrl(selectedSite.absoluteUrl);
 
         if (!isMounted) {
           return;
         }
 
-        setFolders(result.folders);
-        setActiveLibraryServerRelativeUrl(result.libraryServerRelativeUrl);
-        setLoadedSiteAbsoluteUrl(result.webAbsoluteUrl);
-        setSiteUrlDraft(result.webAbsoluteUrl);
-        setSelectedFolderUrl(undefined);
-        setShowSameFolderMessage(false);
-        setMoveError(undefined);
-        setFolderSearchQuery('');
+        setLibraryServerRelativeUrl(destinationLibraryUrl);
+        const loadedFolders = await loadFolders(selectedSite.absoluteUrl, destinationLibraryUrl);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setFolders(loadedFolders);
       } catch (error: unknown) {
         if (!isMounted) {
           return;
         }
 
         setFolders(undefined);
-        setLoadedSiteAbsoluteUrl(undefined);
-        setLoadError(getSiteLoadErrorMessage(
-          error,
-          normalizeAbsoluteUrl(siteLoadRequest.url) ===
-            normalizeAbsoluteUrl(currentSiteAbsoluteUrl)
-            ? strings.LoadFoldersError
-            : strings.LoadSiteError
-        ));
+        setLoadError(getErrorMessage(error, strings.LoadFoldersError));
       }
 
       if (isMounted) {
@@ -420,12 +488,64 @@ function MovePageToFolderDialogContent(
       }
     };
 
-    run().catch(() => undefined);
+    loadDestinationFolders().catch(() => undefined);
 
     return () => {
       isMounted = false;
     };
-  }, [currentSiteAbsoluteUrl, loadFolders, siteLoadRequest]);
+  }, [
+    currentLibraryServerRelativeUrl,
+    loadFolders,
+    resolveSitePagesLibraryUrl,
+    selectedSite
+  ]);
+
+  React.useEffect(() => {
+    let isMounted = true;
+
+    if (!isCrossSite) {
+      setMatchingFields([]);
+      setSelectedFieldNames([]);
+      setMetadataError(undefined);
+      setIsLoadingMetadata(false);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    const loadMetadata = async (): Promise<void> => {
+      setIsLoadingMetadata(true);
+      setMetadataError(undefined);
+
+      try {
+        const fields = await loadMatchingFields(selectedSite.absoluteUrl);
+        if (!isMounted) {
+          return;
+        }
+
+        setMatchingFields(fields);
+        setSelectedFieldNames(fields.map((field) => field.internalName));
+      } catch (error: unknown) {
+        if (!isMounted) {
+          return;
+        }
+
+        setMatchingFields([]);
+        setSelectedFieldNames([]);
+        setMetadataError(getErrorMessage(error, strings.LoadMetadataError));
+      }
+
+      if (isMounted) {
+        setIsLoadingMetadata(false);
+      }
+    };
+
+    loadMetadata().catch(() => undefined);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isCrossSite, loadMatchingFields, selectedSite.absoluteUrl]);
 
   const folderTreeRoot = React.useMemo<IFolderNode | undefined>(() => {
     if (folders === undefined) {
@@ -435,9 +555,9 @@ function MovePageToFolderDialogContent(
     return {
       children: folders,
       name: strings.SitePagesRootLabel,
-      serverRelativeUrl: normalizedLibraryUrl
+      serverRelativeUrl: libraryServerRelativeUrl
     };
-  }, [folders, normalizedLibraryUrl]);
+  }, [folders, libraryServerRelativeUrl]);
 
   const filteredFolderTreeRoot = React.useMemo<IFolderNode | undefined>(() => {
     if (!folderTreeRoot) {
@@ -463,18 +583,12 @@ function MovePageToFolderDialogContent(
   );
 
   const trimmedSearchQuery = folderSearchQuery.trim();
-  const isSameSite = Boolean(
-    loadedSiteAbsoluteUrl &&
-    normalizeAbsoluteUrl(loadedSiteAbsoluteUrl) === normalizeAbsoluteUrl(currentSiteAbsoluteUrl)
-  );
 
   React.useEffect(() => {
     if (!folderTreeRoot) {
       return;
     }
 
-    // Only re-sync when the tree loads or the search query changes.
-    // Do not depend on openItems updates from expand/collapse.
     if (trimmedSearchQuery) {
       const filteredRoot = filterFolderTree(folderTreeRoot, trimmedSearchQuery) ?? {
         ...folderTreeRoot,
@@ -484,26 +598,46 @@ function MovePageToFolderDialogContent(
       return;
     }
 
-    setOpenItems(
-      collectDefaultOpenFolderUrls(
-        folderTreeRoot.serverRelativeUrl,
-        isSameSite ? sharedCurrentFolderUrl : folderTreeRoot.serverRelativeUrl
-      )
-    );
-  }, [folderTreeRoot, isSameSite, sharedCurrentFolderUrl, trimmedSearchQuery]);
+    const defaultOpen = isCrossSite
+      ? [folderTreeRoot.serverRelativeUrl]
+      : collectDefaultOpenFolderUrls(folderTreeRoot.serverRelativeUrl, page.currentFolderUrl);
+
+    setOpenItems(defaultOpen);
+  }, [folderTreeRoot, isCrossSite, page.currentFolderUrl, trimmedSearchQuery]);
 
   const selectedFolderLabel = selectedFolderUrl
-    ? formatFolderLabel(selectedFolderUrl, activeLibraryServerRelativeUrl)
+    ? formatFolderLabel(selectedFolderUrl, libraryServerRelativeUrl)
     : strings.NoFolderSelectedLabel;
-  const isSameFolder = isSameSite &&
-    Boolean(selectedFolderUrl) &&
-    pages.length > 0 &&
-    pages.every((selectedPage) => selectedPage.currentFolderUrl === selectedFolderUrl);
+
+  const isSameFolder = !isCrossSite && selectedFolderUrl === page.currentFolderUrl;
   const canMove = Boolean(selectedFolderUrl) &&
-    Boolean(loadedSiteAbsoluteUrl) &&
     !isMoving &&
     !isLoadingFolders &&
-    !loadError;
+    !loadError &&
+    !(isCrossSite && isLoadingMetadata);
+
+  const handleSiteSelect: ComboboxProps['onOptionSelect'] = (_event, data) => {
+    const nextAbsoluteUrl = data.optionValue;
+    if (!nextAbsoluteUrl) {
+      return;
+    }
+
+    const matchedSite = siteOptions.find(
+      (site) => site.absoluteUrl.toLowerCase() === nextAbsoluteUrl.toLowerCase()
+    ) ?? {
+      absoluteUrl: nextAbsoluteUrl,
+      isCurrentSite: nextAbsoluteUrl.toLowerCase() === currentWebAbsoluteUrl.toLowerCase(),
+      serverRelativeUrl: '/',
+      title: data.optionText || nextAbsoluteUrl
+    };
+
+    setSelectedSite({
+      ...matchedSite,
+      isCurrentSite: matchedSite.absoluteUrl.toLowerCase() ===
+        normalizeAbsoluteUrl(currentWebAbsoluteUrl).toLowerCase()
+    });
+    setSiteQuery('');
+  };
 
   const handleFolderSelect = (folderUrl: string): void => {
     setSelectedFolderUrl(folderUrl);
@@ -515,26 +649,6 @@ function MovePageToFolderDialogContent(
     if (!isMoving) {
       onDismiss().catch(() => undefined);
     }
-  };
-
-  const handleLoadSiteClick = (): void => {
-    if (isMoving || isLoadingFolders) {
-      return;
-    }
-
-    const trimmedSiteUrl = siteUrlDraft.trim();
-    if (!isValidHttpsSiteUrl(trimmedSiteUrl)) {
-      setLoadError(strings.InvalidSiteUrlMessage);
-      setFolders(undefined);
-      setLoadedSiteAbsoluteUrl(undefined);
-      setSelectedFolderUrl(undefined);
-      return;
-    }
-
-    setSiteLoadRequest((previous: ISiteLoadRequest | undefined) => ({
-      nonce: (previous?.nonce ?? 0) + 1,
-      url: trimmedSiteUrl
-    }));
   };
 
   React.useEffect(() => {
@@ -559,7 +673,7 @@ function MovePageToFolderDialogContent(
   }, [isMoving, onDismiss]);
 
   const handleMoveClick = async (): Promise<void> => {
-    if (!selectedFolderUrl || !loadedSiteAbsoluteUrl || isMoving || isLoadingFolders || loadError) {
+    if (!selectedFolderUrl || isMoving || isLoadingFolders || loadError) {
       return;
     }
 
@@ -571,40 +685,40 @@ function MovePageToFolderDialogContent(
 
     setShowSameFolderMessage(false);
     setMoveError(undefined);
-    setMovingPageName(pages[0]?.fileName);
     setIsMoving(true);
 
     try {
-      const warningMessage = await onMove(
-        selectedFolderUrl,
-        loadedSiteAbsoluteUrl,
-        (fileName: string) => {
-          setMovingPageName(fileName);
-        }
-      );
+      await onMove({
+        destinationFolderUrl: selectedFolderUrl,
+        destinationWebAbsoluteUrl: selectedSite.absoluteUrl,
+        selectedFieldInternalNames: isCrossSite ? selectedFieldNames : []
+      });
       setIsMoving(false);
-      setMovingPageName(undefined);
-
-      if (warningMessage) {
-        setMoveError(warningMessage);
-        return;
-      }
-
       await onDismiss();
       return;
     } catch (error: unknown) {
-      setMoveError(getErrorMessage(
-        error,
-        isSameSite ? strings.MovePageError : strings.CrossSiteMoveError
-      ));
+      setMoveError(getErrorMessage(error, strings.MovePageError));
     }
 
     setIsMoving(false);
-    setMovingPageName(undefined);
   };
 
   const handleOpenChange = (_event: TreeOpenChangeEvent, data: TreeOpenChangeData): void => {
     setOpenItems(Array.from(data.openItems, (itemValue) => String(itemValue)));
+  };
+
+  const toggleField = (internalName: string, checked: boolean): void => {
+    setSelectedFieldNames((current) => {
+      if (checked) {
+        if (current.includes(internalName)) {
+          return current;
+        }
+
+        return [...current, internalName];
+      }
+
+      return current.filter((name) => name !== internalName);
+    });
   };
 
   let treeContent: React.ReactNode;
@@ -621,8 +735,6 @@ function MovePageToFolderDialogContent(
         {loadError}
       </div>
     );
-  } else if (!siteLoadRequest) {
-    treeContent = null;
   } else if (filteredFolderTreeRoot && hasMatchingFolders) {
     treeContent = (
       <Tree
@@ -633,7 +745,7 @@ function MovePageToFolderDialogContent(
       >
         <FolderTreeNode
           classes={classes}
-          key={`${loadedSiteAbsoluteUrl ?? ''}|${filteredFolderTreeRoot.serverRelativeUrl}`}
+          key={filteredFolderTreeRoot.serverRelativeUrl}
           level={0}
           node={filteredFolderTreeRoot}
           onSelect={handleFolderSelect}
@@ -656,6 +768,50 @@ function MovePageToFolderDialogContent(
   }
 
   const showSearchBox = !isLoadingFolders && !loadError && Boolean(folderTreeRoot);
+  const selectedSiteLabel = selectedSite.isCurrentSite
+    ? strings.ThisSiteLabel
+    : selectedSite.title;
+
+  let metadataContent: React.ReactNode = null;
+
+  if (isCrossSite) {
+    if (isLoadingMetadata) {
+      metadataContent = (
+        <div className={classes.loadingState}>
+          <Spinner label={strings.LoadingMetadataLabel} />
+        </div>
+      );
+    } else if (metadataError) {
+      metadataContent = (
+        <div className={classes.errorMessage} role="alert">
+          {metadataError}
+        </div>
+      );
+    } else if (matchingFields.length === 0) {
+      metadataContent = (
+        <div className={classes.emptyState} role="status">
+          {strings.NoMatchingMetadataMessage}
+        </div>
+      );
+    } else {
+      metadataContent = (
+        <div className={classes.metadataList}>
+          {matchingFields.map((field) => (
+            <div className={classes.metadataItem} key={field.internalName}>
+              <Checkbox
+                checked={selectedFieldNames.includes(field.internalName)}
+                label={field.displayName}
+                onChange={(_event, data) => {
+                  toggleField(field.internalName, Boolean(data.checked));
+                }}
+              />
+              <span className={classes.metadataInternalName}>{field.internalName}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+  }
 
   return (
     <FluentProvider
@@ -665,65 +821,40 @@ function MovePageToFolderDialogContent(
     >
       <div className={classes.root}>
         <div className={classes.header}>
-          <div className={classes.title}>{dialogTitle}</div>
+          <div className={classes.title}>{strings.DialogTitle} - {page.fileName}</div>
         </div>
 
-        {selectedPagesSummary ? (
-          <div className={classes.summaryCard}>
-            <div className={classes.label}>{strings.SelectedPagesLabel}</div>
-            <div className={classes.value}>{selectedPagesSummary}</div>
-          </div>
-        ) : null}
-
         <div className={classes.sitePicker}>
-          <Label htmlFor="move-page-destination-site">{strings.DestinationSiteLabel}</Label>
-          <div className={classes.siteRow}>
-            <Input
-              aria-label={strings.DestinationSiteLabel}
-              className={classes.siteInput}
-              disabled={isMoving}
-              id="move-page-destination-site"
-              onChange={(_event, data) => {
-                setSiteUrlDraft(data.value);
-              }}
-              onKeyDown={(event) => {
-                // Keep SharePoint list-view shortcuts from stealing Ctrl/Cmd+V and typing.
-                event.stopPropagation();
-
-                if (event.key === 'Enter') {
-                  event.preventDefault();
-                  handleLoadSiteClick();
-                }
-              }}
-              onPaste={(event) => {
-                event.stopPropagation();
-
-                const pastedText = event.clipboardData?.getData('text');
-                if (pastedText === undefined || pastedText === null) {
-                  return;
-                }
-
-                // Apply paste ourselves when SharePoint blocks the default clipboard action.
-                event.preventDefault();
-                const inputElement = event.currentTarget as HTMLInputElement;
-                const selectionStart = inputElement.selectionStart ?? siteUrlDraft.length;
-                const selectionEnd = inputElement.selectionEnd ?? siteUrlDraft.length;
-                setSiteUrlDraft(
-                  `${siteUrlDraft.slice(0, selectionStart)}${pastedText}${siteUrlDraft.slice(selectionEnd)}`
-                );
-              }}
-              placeholder={strings.DestinationSitePlaceholder}
-              value={siteUrlDraft}
-            />
-            <Button
-              appearance="secondary"
-              aria-label={strings.LoadSiteButtonAriaLabel}
-              disabled={isMoving || isLoadingFolders}
-              onClick={handleLoadSiteClick}
-            >
-              {isLoadingFolders ? strings.LoadingSiteLabel : strings.LoadSiteButton}
-            </Button>
-          </div>
+          <div className={classes.label}>{strings.SearchSitesLabel}</div>
+          <Combobox
+            aria-label={strings.SearchSitesLabel}
+            onChange={(event) => {
+              setSiteQuery(event.target.value);
+            }}
+            onOptionSelect={handleSiteSelect}
+            placeholder={strings.SearchSitesPlaceholder}
+            value={siteQuery || selectedSiteLabel}
+          >
+            {isSearchingSites ? (
+              <Option disabled text={strings.SearchSitesPlaceholder} value="__searching">
+                {strings.SearchSitesPlaceholder}
+              </Option>
+            ) : null}
+            {siteOptions.map((site) => (
+              <Option
+                key={site.absoluteUrl}
+                text={site.isCurrentSite ? strings.ThisSiteLabel : site.title}
+                value={site.absoluteUrl}
+              >
+                {site.isCurrentSite ? strings.ThisSiteLabel : `${site.title} (${site.absoluteUrl})`}
+              </Option>
+            ))}
+          </Combobox>
+          {siteSearchError ? (
+            <div className={classes.errorMessage} role="alert">
+              {siteSearchError}
+            </div>
+          ) : null}
         </div>
 
         <div className={classes.folderPicker}>
@@ -733,25 +864,6 @@ function MovePageToFolderDialogContent(
               className={classes.searchBox}
               onChange={(_event, data) => {
                 setFolderSearchQuery(data.value ?? '');
-              }}
-              onKeyDown={(event) => {
-                event.stopPropagation();
-              }}
-              onPaste={(event) => {
-                event.stopPropagation();
-
-                const pastedText = event.clipboardData?.getData('text');
-                if (pastedText === undefined || pastedText === null) {
-                  return;
-                }
-
-                event.preventDefault();
-                const inputElement = event.currentTarget as HTMLInputElement;
-                const selectionStart = inputElement.selectionStart ?? folderSearchQuery.length;
-                const selectionEnd = inputElement.selectionEnd ?? folderSearchQuery.length;
-                setFolderSearchQuery(
-                  `${folderSearchQuery.slice(0, selectionStart)}${pastedText}${folderSearchQuery.slice(selectionEnd)}`
-                );
               }}
               placeholder={strings.SearchFoldersPlaceholder}
               value={folderSearchQuery}
@@ -763,14 +875,58 @@ function MovePageToFolderDialogContent(
           </div>
         </div>
 
+        {isCrossSite ? (
+          <div className={classes.metadataSection}>
+            <div className={classes.metadataHeader}>
+              <div>
+                <div className={classes.sectionTitle}>{strings.MetadataSectionLabel}</div>
+                <div className={classes.sectionCaption}>{strings.MetadataSectionHint}</div>
+              </div>
+              {matchingFields.length > 0 && !isLoadingMetadata && !metadataError ? (
+                <div className={classes.metadataActions}>
+                  <Button
+                    appearance="subtle"
+                    disabled={isMoving}
+                    onClick={() => {
+                      setSelectedFieldNames(matchingFields.map((field) => field.internalName));
+                    }}
+                    size="small"
+                  >
+                    {strings.SelectAllMetadataLabel}
+                  </Button>
+                  <Button
+                    appearance="subtle"
+                    disabled={isMoving}
+                    onClick={() => {
+                      setSelectedFieldNames([]);
+                    }}
+                    size="small"
+                  >
+                    {strings.ClearMetadataLabel}
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+            {metadataContent}
+          </div>
+        ) : null}
+
         <div className={classes.summaryCard}>
-          <div className={classes.label}>{strings.SelectedFolderLabel}</div>
-          <div className={classes.value}>{selectedFolderLabel}</div>
+          <div className={classes.summaryStack}>
+            <div>
+              <div className={classes.label}>{strings.SelectedSiteLabel}</div>
+              <div className={classes.value}>{selectedSiteLabel}</div>
+            </div>
+            <div>
+              <div className={classes.label}>{strings.SelectedFolderLabel}</div>
+              <div className={classes.value}>{selectedFolderLabel}</div>
+            </div>
+          </div>
         </div>
 
         {showSameFolderMessage ? (
           <div className={classes.errorMessage} role="status">
-            {isMultiplePages ? strings.SameFolderMessageMultiple : strings.SameFolderMessage}
+            {strings.SameFolderMessage}
           </div>
         ) : null}
 
@@ -786,7 +942,7 @@ function MovePageToFolderDialogContent(
               <div className={classes.movingStatus} role="status" aria-live="polite">
                 <Spinner size="tiny" />
                 <span className={classes.movingStatusText}>
-                  {strings.MovingStatusLabel.replace('{0}', movingPageName || pages[0]?.fileName || '')}
+                  {strings.MovingStatusLabel.replace('{0}', page.fileName)}
                 </span>
               </div>
             )
@@ -825,19 +981,6 @@ export default class MovePageToFolderDialog extends BaseDialog {
     return this._didMove;
   }
 
-  protected onBeforeOpen(): Promise<void> {
-    // SharePoint can hide #o365shellwcssframe and steal focus from dialog inputs.
-    // See https://github.com/SharePoint/sp-dev-docs/issues/10310
-    const shellFrame = document.getElementById('o365shellwcssframe');
-    if (shellFrame) {
-      shellFrame.style.display = 'block';
-    }
-
-    return new Promise((resolve) => {
-      window.setTimeout(() => resolve(), 0);
-    });
-  }
-
   protected render(): void {
     this.domElement.style.width = '100%';
 
@@ -848,12 +991,15 @@ export default class MovePageToFolderDialog extends BaseDialog {
 
     ReactDOM.render(
       <MovePageToFolderDialogContent
-        currentSiteAbsoluteUrl={this._props.currentSiteAbsoluteUrl}
-        libraryServerRelativeUrl={this._props.libraryServerRelativeUrl}
+        currentLibraryServerRelativeUrl={this._props.currentLibraryServerRelativeUrl}
+        currentWebAbsoluteUrl={this._props.currentWebAbsoluteUrl}
         loadFolders={this._props.loadFolders}
+        loadMatchingFields={this._props.loadMatchingFields}
         onDismiss={this._handleDismiss}
         onMove={this._handleMove}
-        pages={this._props.pages}
+        page={this._props.page}
+        resolveSitePagesLibraryUrl={this._props.resolveSitePagesLibraryUrl}
+        searchSites={this._props.searchSites}
       />,
       this.domElement
     );
@@ -867,18 +1013,9 @@ export default class MovePageToFolderDialog extends BaseDialog {
     await this.close();
   };
 
-  private _handleMove = async (
-    destinationFolderUrl: string,
-    siteAbsoluteUrl: string,
-    onProgress?: (fileName: string) => void
-  ): Promise<string | undefined> => {
-    const warningMessage = await this._props.onMove(
-      destinationFolderUrl,
-      siteAbsoluteUrl,
-      onProgress
-    );
+  private _handleMove = async (request: IMoveRequest): Promise<void> => {
+    await this._props.onMove(request);
     this._didMove = true;
-    return warningMessage;
   };
 }
 
@@ -944,7 +1081,6 @@ function collectDefaultOpenFolderUrls(
   const pathSegments = relativeFolderPath.split('/').filter((segment) => segment.length > 0);
   let pathBuilder = normalizedLibraryUrl;
 
-  // Open ancestors only so the current folder row is visible without expanding its children.
   for (let segmentIndex = 0; segmentIndex < pathSegments.length - 1; segmentIndex++) {
     pathBuilder = `${pathBuilder}/${pathSegments[segmentIndex]}`;
     openFolderUrls.push(pathBuilder);
@@ -979,75 +1115,20 @@ function filterFolderTree(node: IFolderNode, query: string): IFolderNode | undef
   };
 }
 
-function getSiteLoadErrorMessage(error: unknown, fallbackMessage: string): string {
-  const rawMessage = getRawErrorMessage(error);
-
-  if (rawMessage && isSiteNotFoundOrAccessError(rawMessage)) {
-    return strings.SiteNotFoundOrNoAccessMessage;
-  }
-
-  if (rawMessage && isTechnicalHttpClientError(rawMessage)) {
-    return fallbackMessage;
-  }
-
-  return getErrorMessage(error, fallbackMessage);
-}
-
 function getErrorMessage(error: unknown, fallbackMessage: string): string {
-  const rawMessage = getRawErrorMessage(error);
-  if (rawMessage) {
-    return rawMessage;
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  if (typeof error === 'string' && error.trim()) {
+    return error;
   }
 
   return fallbackMessage;
 }
 
-function getRawErrorMessage(error: unknown): string | undefined {
-  if (error instanceof Error && error.message.trim()) {
-    return error.message.trim();
-  }
-
-  if (typeof error === 'string' && error.trim()) {
-    return error.trim();
-  }
-
-  return undefined;
-}
-
-function isSiteNotFoundOrAccessError(message: string): boolean {
-  return /\[(401|403|404)\]/.test(message) ||
-    /\b(401|403|404)\b/.test(message) ||
-    /access\s*denied/i.test(message) ||
-    /unauthorized/i.test(message) ||
-    /forbidden/i.test(message) ||
-    /does not exist/i.test(message) ||
-    /site\s+.*not\s+found/i.test(message);
-}
-
-function isTechnicalHttpClientError(message: string): boolean {
-  return /Error making HttpClient request in queryable/i.test(message);
-}
-
-function isValidHttpsSiteUrl(value: string): boolean {
-  try {
-    const parsed = new URL(value.trim());
-    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
-  } catch {
-    return false;
-  }
-}
-
 function normalizeAbsoluteUrl(absoluteUrl: string): string {
-  try {
-    const parsed = new URL(absoluteUrl.trim());
-    const path = normalizeServerRelativeUrl(parsed.pathname);
-    const origin = parsed.protocol === 'http:'
-      ? `https://${parsed.host}`
-      : parsed.origin;
-    return path === '/' ? origin : `${origin}${path}`.toLowerCase();
-  } catch {
-    return absoluteUrl.trim().toLowerCase();
-  }
+  return absoluteUrl.trim().replace(/\/+$/, '');
 }
 
 function normalizeServerRelativeUrl(serverRelativeUrl: string): string {

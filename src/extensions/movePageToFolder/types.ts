@@ -7,30 +7,29 @@ export interface IFolderNode {
 export interface ISelectedPageInfo {
   currentFolderUrl: string;
   fileName: string;
+  listItemId?: number;
   serverRelativeUrl: string;
+}
+
+export interface ISiteOption {
+  absoluteUrl: string;
+  isCurrentSite: boolean;
+  serverRelativeUrl: string;
+  title: string;
+}
+
+export interface IMetadataField {
+  displayName: string;
+  internalName: string;
+  typeAsString: string;
+}
+
+export interface IMoveRequest {
+  destinationFolderUrl: string;
+  destinationWebAbsoluteUrl: string;
+  selectedFieldInternalNames: string[];
 }
 
 export interface IMoveOperationResult {
   destinationFileUrl: string;
-}
-
-export interface IMovePagesResult {
-  failures: Array<{
-    fileName: string;
-    message: string;
-  }>;
-  movedCount: number;
-  results: IMoveOperationResult[];
-}
-
-export interface IResolvedSitePagesLibrary {
-  libraryServerRelativeUrl: string;
-  webAbsoluteUrl: string;
-  webServerRelativeUrl: string;
-}
-
-export interface ILoadFoldersResult {
-  folders: IFolderNode[];
-  libraryServerRelativeUrl: string;
-  webAbsoluteUrl: string;
 }
