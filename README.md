@@ -16,6 +16,14 @@ SPFx **List View Command Set** that adds a **Move to folder** action to the Site
 
 ---
 
+## Screenshot
+
+![Move page to folder dialog](./assets/move-page-to-folder-dialog.png)
+
+*Move page to folder dialog — site picker, searchable Site Pages folder tree, destination summary, Move / Cancel actions.*
+
+---
+
 ## Functional
 
 ### Purpose
