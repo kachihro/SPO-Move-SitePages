@@ -156,6 +156,8 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
   const [loading, setLoading] = React.useState(mode !== "new");
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | undefined>(undefined);
+  /** Documents are uploaded straight to Dataverse — don't let the footer unmount mid-POST. */
+  const [attachmentsBusy, setAttachmentsBusy] = React.useState(false);
   const [contactName, setContactName] = React.useState(() => resolvePortalContactName());
   const confirmed = !!formData.confirmed;
 
@@ -288,6 +290,28 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
 
   const handlePrev = () => setStep((s) => Math.max(s - 1, 1));
 
+  /**
+   * Jumping forward via the stepper must save first, exactly like Next — otherwise a brand-new
+   * application can land on step 3 with no `recordId`, and step 3's attachments have nothing to
+   * attach to. Jumping backwards is free.
+   */
+  const handleStepSelect = async (target: number) => {
+    if (target <= step) {
+      setStep(target);
+      return;
+    }
+    setSaving(true);
+    setError(undefined);
+    try {
+      await persist();
+      setStep(target);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!formData.confirmed) {
       setError("Please confirm that this form has been completed to the best of your knowledge before submitting.");
@@ -332,6 +356,9 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
     );
   }
 
+  // Uploads write straight to Dataverse, so leaving the wizard mid-upload would drop an in-flight POST.
+  const busy = saving || attachmentsBusy;
+
   const title =
     mode === "new" ? "New application" : mode === "view" ? "View application" : "Continue your application";
   const blurb =
@@ -360,7 +387,13 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
         )}
       </div>
 
-      {!readOnly && <WizardStepper current={step} labels={STEP_LABELS} onSelect={setStep} />}
+      {!readOnly && (
+        <WizardStepper
+          current={step}
+          labels={STEP_LABELS}
+          onSelect={(target) => void handleStepSelect(target)}
+        />
+      )}
 
       {error && (
         <MessageBar intent="error" style={{ margin: "12px 0" }}>
@@ -372,14 +405,20 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
         <div className={styles.allSteps}>
           <StepApplicantAndActivity formData={formData} onChange={setFormData} readOnly />
           <StepFeeAndChecklist formData={formData} onChange={setFormData} readOnly />
-          <StepReview formData={formData} onChange={setFormData} readOnly />
+          <StepReview formData={formData} onChange={setFormData} readOnly recordId={recordId} />
         </div>
       ) : (
         <>
           {step === 1 && <StepApplicantAndActivity formData={formData} onChange={setFormData} readOnly={false} />}
           {step === 2 && <StepFeeAndChecklist formData={formData} onChange={setFormData} readOnly={false} />}
           {step === 3 && (
-            <StepReview formData={formData} onChange={setFormData} readOnly={false} />
+            <StepReview
+              formData={formData}
+              onChange={setFormData}
+              readOnly={false}
+              recordId={recordId}
+              onAttachmentsBusyChange={setAttachmentsBusy}
+            />
           )}
         </>
       )}
@@ -398,27 +437,27 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
           </div>
         )}
         <div className={styles.footer}>
-          <HeroButton onClick={onCancel} disabled={saving}>
+          <HeroButton onClick={onCancel} disabled={busy}>
             {readOnly ? "Back" : "Cancel"}
           </HeroButton>
           {!readOnly && (
             <div className={styles.footerActions}>
               {step > 1 && (
-                <HeroButton onClick={handlePrev} disabled={saving}>
+                <HeroButton onClick={handlePrev} disabled={busy}>
                   Prev
                 </HeroButton>
               )}
               {step < STEP_LABELS.length && (
-                <HeroButton onClick={() => void handleNext()} disabled={saving}>
+                <HeroButton onClick={() => void handleNext()} disabled={busy}>
                   Next
                 </HeroButton>
               )}
               {step === STEP_LABELS.length && (
-                <HeroButton onClick={() => void handleSubmit()} disabled={saving || !confirmed}>
+                <HeroButton onClick={() => void handleSubmit()} disabled={busy || !confirmed}>
                   Submit
                 </HeroButton>
               )}
-              <HeroButton onClick={() => void handleSaveDraft()} disabled={saving}>
+              <HeroButton onClick={() => void handleSaveDraft()} disabled={busy}>
                 Save Draft
               </HeroButton>
             </div>

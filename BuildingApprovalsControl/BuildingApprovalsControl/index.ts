@@ -4,9 +4,19 @@ import { BuildingApprovalsApp } from "./components/BuildingApprovalsApp";
 import { ensurePortalChromeHidden } from "./portalChromeHide";
 import { resolvePortalContactId } from "./services/portalContactId";
 import { WebApiClient } from "./services/WebApiClient";
+import { AttachmentClient } from "./services/AttachmentClient";
+import { MockAttachmentClient } from "./services/MockAttachmentClient";
+import { PortalAnnotationClient } from "./services/PortalAnnotationClient";
+
+/** The dev harness has no `/_api/` to talk to — see MockAttachmentClient. */
+function createAttachmentClient(): AttachmentClient {
+    const isHarness = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    return isHarness ? new MockAttachmentClient() : new PortalAnnotationClient();
+}
 
 export class BuildingApprovalsControl implements ComponentFramework.ReactControl<IInputs, IOutputs> {
     private client: WebApiClient | undefined;
+    private attachments: AttachmentClient | undefined;
 
     /**
      * Empty constructor.
@@ -26,6 +36,7 @@ export class BuildingApprovalsControl implements ComponentFramework.ReactControl
         // Stable client instance — recreating on every updateView re-fired the wizard load effect
         // (context value identity change) and could leave the form empty after open.
         this.client = new WebApiClient(context.webAPI);
+        this.attachments = createAttachmentClient();
     }
 
     public updateView(context: ComponentFramework.Context<IInputs>): React.ReactElement {
@@ -33,11 +44,16 @@ export class BuildingApprovalsControl implements ComponentFramework.ReactControl
         // when hosted inside Power Pages (as opposed to a model-driven app) — if it doesn't, swap this
         // for a PortalRestClient(siteBaseUrl) instance instead. Keep the swap isolated to this one line.
         this.client ??= new WebApiClient(context.webAPI);
+        this.attachments ??= createAttachmentClient();
 
         // Power Pages often leaves userSettings.userId empty — prefer Liquid-rendered #aal-portal-contact-id.
         const contactId = resolvePortalContactId(context.userSettings?.userId);
 
-        return React.createElement(BuildingApprovalsApp, { client: this.client, contactId });
+        return React.createElement(BuildingApprovalsApp, {
+            client: this.client,
+            attachmentClient: this.attachments,
+            contactId,
+        });
     }
 
     public getOutputs(): IOutputs {

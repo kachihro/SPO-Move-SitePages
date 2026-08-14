@@ -32,10 +32,12 @@ async function portalApiRequest(
   const token = await requestVerificationToken();
   const headers: Record<string, string> = {
     Accept: "application/json",
-    "Content-Type": "application/json",
     "OData-MaxVersion": "4.0",
     "OData-Version": "4.0",
   };
+  // Only on requests that actually carry a body — a bodyless DELETE declaring a JSON
+  // content type is a needless 415 risk.
+  if (body !== undefined) headers["Content-Type"] = "application/json";
   if (token) headers.__RequestVerificationToken = token;
 
   const url = `${window.location.origin.replace(/\/$/, "")}/_api/${path.replace(/^\//, "")}`;
@@ -63,8 +65,52 @@ async function portalApiRequest(
   return res;
 }
 
+/**
+ * Read a JSON body defensively: Power Pages sometimes answers 200 with an empty body, which
+ * throws inside `res.json()`. Read text first, parse only when there is something to parse.
+ */
+async function readJson<T>(res: Response): Promise<T | undefined> {
+  if (res.status === 204 || res.headers.get("Content-Length") === "0") return undefined;
+  const text = await res.text();
+  if (!text) return undefined;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function portalApiPatch(entitySetPath: string, body: Record<string, unknown>): Promise<void> {
   await portalApiRequest("PATCH", entitySetPath, body);
+}
+
+export async function portalApiGet<T>(path: string): Promise<T | undefined> {
+  return readJson<T>(await portalApiRequest("GET", path));
+}
+
+/**
+ * Create a record and return its id. Power Pages answers 204 with the id only in the
+ * `OData-EntityId` header — readable here because the request is same-origin (no CORS
+ * header filtering). `idField` is the fallback for hosts that return a representation.
+ */
+export async function portalApiPost(
+  entitySetPath: string,
+  body: Record<string, unknown>,
+  idField?: string
+): Promise<string | undefined> {
+  const res = await portalApiRequest("POST", entitySetPath, body);
+
+  const header = res.headers.get("OData-EntityId") ?? res.headers.get("odata-entityid");
+  const fromHeader = header ? /\(([0-9a-fA-F-]{36})\)/.exec(header)?.[1] : undefined;
+  if (fromHeader) return fromHeader;
+
+  const json = await readJson<Record<string, unknown>>(res);
+  const value = idField ? json?.[idField] : undefined;
+  return typeof value === "string" ? value : undefined;
+}
+
+export async function portalApiDelete(entitySetPath: string): Promise<void> {
+  await portalApiRequest("DELETE", entitySetPath);
 }
 
 /**
