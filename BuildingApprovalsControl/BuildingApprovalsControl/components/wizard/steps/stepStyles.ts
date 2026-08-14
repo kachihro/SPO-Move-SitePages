@@ -98,7 +98,8 @@ export const useStepStyles = makeStyles({
     gap: "12px",
     marginTop: "8px",
     marginBottom: "4px",
-    marginLeft: "28px",
+    marginLeft: "70px",
+    marginRight: "70px",
     paddingTop: "16px",
     paddingRight: "20px",
     paddingBottom: "16px",
@@ -106,10 +107,10 @@ export const useStepStyles = makeStyles({
     borderRadius: "12px",
     // Longhands, not the `border` / `borderLeft` shorthands: Griffel expands shorthands into
     // longhands, and a rule mixing both can lose the more specific one.
-    borderTopWidth: "1px",
-    borderRightWidth: "1px",
-    borderBottomWidth: "1px",
-    borderLeftWidth: "3px",
+    borderTopWidth: "2px",
+    borderRightWidth: "2px",
+    borderBottomWidth: "2px",
+    borderLeftWidth: "4px",
     borderTopStyle: "solid",
     borderRightStyle: "solid",
     borderBottomStyle: "solid",
@@ -118,7 +119,7 @@ export const useStepStyles = makeStyles({
     borderRightColor: "#E0DBD3",
     borderBottomColor: "#E0DBD3",
     borderLeftColor: "#9B2D6A",
-    backgroundColor: "#FCFAF8",
+    backgroundColor: "#FEFDFC",
   },
   utilityLabel: {
     margin: "8px 0 0",

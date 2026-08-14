@@ -308,10 +308,23 @@ export function emptyFormData(): BuildingApprovalFormData {
     owner: {},
     buildingContractor: {},
     worksComplyWith: {},
+    // Every Yes/No row starts on No, so a new application is answered rather than blank and the
+    // reveal-on-Yes sections stay collapsed until the applicant opts in.
     checklist: {
-      electrical: {},
-      hydraulics: { domesticWater: {}, recycledWater: {}, sewerage: {}, fireWater: {} },
-      security: {},
+      electrical: { supplyApplicationRequired: false, meterProvided: false },
+      hydraulics: {
+        domesticWater: { connectionRequired: false, meterProvided: false },
+        recycledWater: { connectionRequired: false, meterProvided: false },
+        sewerage: { connectionRequired: false },
+        fireWater: { connectionRequired: false },
+        backflowPreventionConfirmed: false,
+      },
+      security: {
+        securityRestrictedArea: false,
+        customsControlledArea: false,
+        sterileArea: false,
+        airsideFenceChangeRequired: false,
+      },
     },
   };
 }

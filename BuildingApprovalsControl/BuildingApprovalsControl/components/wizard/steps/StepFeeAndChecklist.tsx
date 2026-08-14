@@ -2,6 +2,7 @@ import * as React from "react";
 import { Field, Input, Option, Dropdown, Textarea } from "@fluentui/react-components";
 import { BuildingApprovalFormData, FEE_AMOUNT_TYPE_OPTIONS } from "../../../types/BuildingApproval";
 import { CollapsibleSection } from "./CollapsibleSection";
+import { NumberInput } from "./NumberInput";
 import { StepProps } from "./StepApplicantAndActivity";
 import { useStepStyles } from "./stepStyles";
 import { YesNoField } from "./YesNoField";
@@ -21,13 +22,11 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
     <div className={styles.stack}>
       <CollapsibleSection title="Application Fee">
         <Field label="Estimated Value of Building Activity">
-          <Input
+          <NumberInput
             className={styles.input}
-            value={formData.estimatedValueOfBuildingActivity?.toString() ?? ""}
+            value={formData.estimatedValueOfBuildingActivity}
             disabled={readOnly}
-            onChange={(_, d) =>
-              update((f) => (f.estimatedValueOfBuildingActivity = d.value === "" ? undefined : Number(d.value)))
-            }
+            onChange={(v) => update((f) => (f.estimatedValueOfBuildingActivity = v))}
           />
         </Field>
         <Field label="Fee Amount Type">
@@ -94,25 +93,19 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
               />
               <div className={styles.twoColumn}>
                 <Field label="Amps Per Phase">
-                  <Input
+                  <NumberInput
                     className={styles.input}
-                    value={electrical.ampsPerPhase?.toString() ?? ""}
+                    value={electrical.ampsPerPhase}
                     disabled={readOnly}
-                    onChange={(_, d) =>
-                      update((f) => (f.checklist.electrical.ampsPerPhase = d.value === "" ? undefined : Number(d.value)))
-                    }
+                    onChange={(v) => update((f) => (f.checklist.electrical.ampsPerPhase = v))}
                   />
                 </Field>
                 <Field label="Total Power Demand (kwh)">
-                  <Input
+                  <NumberInput
                     className={styles.input}
-                    value={electrical.totalPowerDemand?.toString() ?? ""}
+                    value={electrical.totalPowerDemand}
                     disabled={readOnly}
-                    onChange={(_, d) =>
-                      update(
-                        (f) => (f.checklist.electrical.totalPowerDemand = d.value === "" ? undefined : Number(d.value))
-                      )
-                    }
+                    onChange={(v) => update((f) => (f.checklist.electrical.totalPowerDemand = v))}
                   />
                 </Field>
               </div>
@@ -145,16 +138,11 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
                 onChange={(v) => update((f) => (f.checklist.hydraulics.domesticWater.meterProvided = v))}
               />
               <Field label="Demand (size of supply or flow rate)">
-                <Input
+                <NumberInput
                   className={styles.input}
-                  value={hydraulics.domesticWater.demand?.toString() ?? ""}
+                  value={hydraulics.domesticWater.demand}
                   disabled={readOnly}
-                  onChange={(_, d) =>
-                    update(
-                      (f) =>
-                        (f.checklist.hydraulics.domesticWater.demand = d.value === "" ? undefined : Number(d.value))
-                    )
-                  }
+                  onChange={(v) => update((f) => (f.checklist.hydraulics.domesticWater.demand = v))}
                 />
               </Field>
             </div>
@@ -178,16 +166,11 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
                 onChange={(v) => update((f) => (f.checklist.hydraulics.recycledWater.meterProvided = v))}
               />
               <Field label="Demand (size of supply or flow rate)">
-                <Input
+                <NumberInput
                   className={styles.input}
-                  value={hydraulics.recycledWater.demand?.toString() ?? ""}
+                  value={hydraulics.recycledWater.demand}
                   disabled={readOnly}
-                  onChange={(_, d) =>
-                    update(
-                      (f) =>
-                        (f.checklist.hydraulics.recycledWater.demand = d.value === "" ? undefined : Number(d.value))
-                    )
-                  }
+                  onChange={(v) => update((f) => (f.checklist.hydraulics.recycledWater.demand = v))}
                 />
               </Field>
             </div>
@@ -205,15 +188,11 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
           {hydraulics.sewerage.connectionRequired && (
             <div className={styles.conditionalGroup}>
               <Field label="Demand (size of supply or flow rate)">
-                <Input
+                <NumberInput
                   className={styles.input}
-                  value={hydraulics.sewerage.demand?.toString() ?? ""}
+                  value={hydraulics.sewerage.demand}
                   disabled={readOnly}
-                  onChange={(_, d) =>
-                    update(
-                      (f) => (f.checklist.hydraulics.sewerage.demand = d.value === "" ? undefined : Number(d.value))
-                    )
-                  }
+                  onChange={(v) => update((f) => (f.checklist.hydraulics.sewerage.demand = v))}
                 />
               </Field>
             </div>
@@ -231,15 +210,11 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
           {hydraulics.fireWater.connectionRequired && (
             <div className={styles.conditionalGroup}>
               <Field label="Demand (size of supply or flow rate)">
-                <Input
+                <NumberInput
                   className={styles.input}
-                  value={hydraulics.fireWater.demand?.toString() ?? ""}
+                  value={hydraulics.fireWater.demand}
                   disabled={readOnly}
-                  onChange={(_, d) =>
-                    update(
-                      (f) => (f.checklist.hydraulics.fireWater.demand = d.value === "" ? undefined : Number(d.value))
-                    )
-                  }
+                  onChange={(v) => update((f) => (f.checklist.hydraulics.fireWater.demand = v))}
                 />
               </Field>
             </div>
