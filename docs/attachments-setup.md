@@ -25,12 +25,21 @@ never off, so ticking it is safe but irreversible.
 | Name | Value |
 |---|---|
 | `Webapi/annotation/enabled` | `true` |
-| `Webapi/annotation/fields` | `annotationid,subject,notetext,filename,mimetype,documentbody,filesize,isdocument,objectid,createdon` |
+| `Webapi/annotation/fields` | `annotationid,subject,notetext,filename,mimetype,documentbody,filesize,isdocument,createdon,objectid,objecttypecode,_objectid_value,objectid_cr137_buildingactivityapplication` |
 | `Webapi/error/innererror` | `true` — temporarily, while testing |
 
-`objectid` **must** be in the field list or the `@odata.bind` on create is rejected. Use the explicit
-list rather than `*`, matching the project's existing `$select` convention and avoiding wider
-`documentbody` exposure.
+All three spellings of the `objectid` lookup are required, because Power Pages validates the
+**literal attribute name in the request** against this list, not the logical name behind it:
+
+| Spelling | Needed by | Failure if missing |
+|---|---|---|
+| `objectid` | the lookup itself | — |
+| `_objectid_value` | `$select`/`$filter` when listing | `Attachment list failed: … Attribute _objectid_value in table annotation is not enabled for Web Api.` |
+| `objectid_cr137_buildingactivityapplication` | the `@odata.bind` on create | `Attachment upload failed: … Attribute objectid_cr137_buildingactivityapplication in table annotation is not enabled for Web Api.` |
+
+Site settings are cached — **Clear cache** in the Power Pages admin centre after editing, or the old
+allowlist keeps rejecting. Use the explicit list rather than `*`, matching the project's existing
+`$select` convention and avoiding wider `documentbody` exposure.
 
 ## 2. Table Permissions
 

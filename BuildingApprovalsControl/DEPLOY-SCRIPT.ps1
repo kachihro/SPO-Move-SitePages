@@ -54,6 +54,36 @@ if (-not $SkipBuild) {
 # 3. Push PCF
 # Prefer --solution-unique-name once BuildingApprovalsSolution exists in the target env.
 # Until then, --publisher-prefix creates/updates PowerAppsToolsTemp_<prefix>.
+#
+# pac pcf push deletes and recreates obj\PowerAppsToolsTemp_<prefix>. A second push
+# (or a leftover MSBuild) while that folder is in use produces MSB4025 (cdsproj
+# vanished mid-restore) and "used by another process".
+$overlapping = @(Get-CimInstance Win32_Process -Filter "Name = 'pac.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -match 'pcf push' })
+if ($overlapping.Count -gt 0) {
+    Write-Error "Another pac pcf push is already running (PID $($overlapping.ProcessId -join ', ')). Wait for it to finish, then retry."
+}
+
+$tempWrapper = Join-Path $ProjectRoot "obj\PowerAppsToolsTemp_$PublisherPrefix"
+if (Test-Path -LiteralPath $tempWrapper) {
+    Write-Host "Removing leftover temp wrapper $tempWrapper ..." -ForegroundColor Cyan
+    $removed = $false
+    for ($i = 1; $i -le 5; $i++) {
+        try {
+            Remove-Item -LiteralPath $tempWrapper -Recurse -Force -ErrorAction Stop
+            $removed = $true
+            break
+        }
+        catch {
+            Write-Host "Temp wrapper locked, retry $i/5 ..." -ForegroundColor Yellow
+            Start-Sleep -Seconds 2
+        }
+    }
+    if (-not $removed) {
+        Write-Error "Could not remove $tempWrapper (file in use). Close other pac/MSBuild windows and retry."
+    }
+}
+
 Write-Host "Pushing PCF ..." -ForegroundColor Cyan
 if ($SolutionUniqueName) {
     pac pcf push --solution-unique-name $SolutionUniqueName
