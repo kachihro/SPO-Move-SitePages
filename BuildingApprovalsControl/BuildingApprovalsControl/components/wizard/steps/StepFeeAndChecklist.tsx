@@ -85,7 +85,7 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
             onChange={(v) => update((f) => (f.checklist.electrical.supplyApplicationRequired = v))}
           />
           {electrical.supplyApplicationRequired && (
-            <>
+            <div className={styles.conditionalGroup}>
               <YesNoField
                 label="Meter provided"
                 value={electrical.meterProvided}
@@ -124,7 +124,7 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
                   onChange={(_, d) => update((f) => (f.checklist.electrical.maximumDemandAndSupplyDetails = d.value))}
                 />
               </Field>
-            </>
+            </div>
           )}
         </div>
 
@@ -137,7 +137,7 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
             onChange={(v) => update((f) => (f.checklist.hydraulics.domesticWater.connectionRequired = v))}
           />
           {hydraulics.domesticWater.connectionRequired && (
-            <>
+            <div className={styles.conditionalGroup}>
               <YesNoField
                 label="Meter provided"
                 value={hydraulics.domesticWater.meterProvided}
@@ -157,7 +157,7 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
                   }
                 />
               </Field>
-            </>
+            </div>
           )}
         </div>
 
@@ -170,7 +170,7 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
             onChange={(v) => update((f) => (f.checklist.hydraulics.recycledWater.connectionRequired = v))}
           />
           {hydraulics.recycledWater.connectionRequired && (
-            <>
+            <div className={styles.conditionalGroup}>
               <YesNoField
                 label="Meter provided"
                 value={hydraulics.recycledWater.meterProvided}
@@ -190,7 +190,7 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
                   }
                 />
               </Field>
-            </>
+            </div>
           )}
         </div>
 
@@ -203,16 +203,20 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
             onChange={(v) => update((f) => (f.checklist.hydraulics.sewerage.connectionRequired = v))}
           />
           {hydraulics.sewerage.connectionRequired && (
-            <Field label="Demand (size of supply or flow rate)">
-              <Input
-                className={styles.input}
-                value={hydraulics.sewerage.demand?.toString() ?? ""}
-                disabled={readOnly}
-                onChange={(_, d) =>
-                  update((f) => (f.checklist.hydraulics.sewerage.demand = d.value === "" ? undefined : Number(d.value)))
-                }
-              />
-            </Field>
+            <div className={styles.conditionalGroup}>
+              <Field label="Demand (size of supply or flow rate)">
+                <Input
+                  className={styles.input}
+                  value={hydraulics.sewerage.demand?.toString() ?? ""}
+                  disabled={readOnly}
+                  onChange={(_, d) =>
+                    update(
+                      (f) => (f.checklist.hydraulics.sewerage.demand = d.value === "" ? undefined : Number(d.value))
+                    )
+                  }
+                />
+              </Field>
+            </div>
           )}
         </div>
 
@@ -225,16 +229,20 @@ export const StepFeeAndChecklist: React.FC<StepProps> = ({ formData, onChange, r
             onChange={(v) => update((f) => (f.checklist.hydraulics.fireWater.connectionRequired = v))}
           />
           {hydraulics.fireWater.connectionRequired && (
-            <Field label="Demand (size of supply or flow rate)">
-              <Input
-                className={styles.input}
-                value={hydraulics.fireWater.demand?.toString() ?? ""}
-                disabled={readOnly}
-                onChange={(_, d) =>
-                  update((f) => (f.checklist.hydraulics.fireWater.demand = d.value === "" ? undefined : Number(d.value)))
-                }
-              />
-            </Field>
+            <div className={styles.conditionalGroup}>
+              <Field label="Demand (size of supply or flow rate)">
+                <Input
+                  className={styles.input}
+                  value={hydraulics.fireWater.demand?.toString() ?? ""}
+                  disabled={readOnly}
+                  onChange={(_, d) =>
+                    update(
+                      (f) => (f.checklist.hydraulics.fireWater.demand = d.value === "" ? undefined : Number(d.value))
+                    )
+                  }
+                />
+              </Field>
+            </div>
           )}
 
           <YesNoField

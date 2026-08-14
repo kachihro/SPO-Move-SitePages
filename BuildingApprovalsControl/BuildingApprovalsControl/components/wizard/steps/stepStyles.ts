@@ -88,6 +88,38 @@ export const useStepStyles = makeStyles({
     backgroundColor: "#E8E8E8",
     borderRadius: "4px",
   },
+  /**
+   * Wrapper for fields that only appear once a Yes/No answer reveals them. Indented and framed so
+   * the dependency on the answer above is visible rather than implied by proximity.
+   */
+  conditionalGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+    marginTop: "8px",
+    marginBottom: "4px",
+    marginLeft: "28px",
+    paddingTop: "16px",
+    paddingRight: "20px",
+    paddingBottom: "16px",
+    paddingLeft: "20px",
+    borderRadius: "12px",
+    // Longhands, not the `border` / `borderLeft` shorthands: Griffel expands shorthands into
+    // longhands, and a rule mixing both can lose the more specific one.
+    borderTopWidth: "1px",
+    borderRightWidth: "1px",
+    borderBottomWidth: "1px",
+    borderLeftWidth: "3px",
+    borderTopStyle: "solid",
+    borderRightStyle: "solid",
+    borderBottomStyle: "solid",
+    borderLeftStyle: "solid",
+    borderTopColor: "#E0DBD3",
+    borderRightColor: "#E0DBD3",
+    borderBottomColor: "#E0DBD3",
+    borderLeftColor: "#9B2D6A",
+    backgroundColor: "#FCFAF8",
+  },
   utilityLabel: {
     margin: "8px 0 0",
     fontSize: "13px",
