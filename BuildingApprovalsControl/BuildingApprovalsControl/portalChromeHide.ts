@@ -147,6 +147,15 @@ table[data-name="panel_PCF"] > tbody > tr > td,
   flex: 1 1 auto !important;
 }
 
+/*
+ * Fluent renders Spinner/Field labels as <label>, which the portal theme paints white —
+ * a white box behind the text on our tinted panels. Let the panel colour show through.
+ */
+.aal-ba-shell label,
+.aal-ba-shell .fui-Spinner__label {
+  background-color: transparent !important;
+}
+
 /* Beige content panel: cap + centre at original middle-pane width */
 .aal-ba-shell {
   width: 100% !important;

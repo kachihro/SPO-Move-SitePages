@@ -20,14 +20,24 @@ export const BUILDING_APPROVAL_ID_FIELD = "cr137_buildingactivityapplicationid";
  */
 
 /** Columns needed by the submissions grid (+ portaluser for client-side scoping). */
-export const BUILDING_APPROVAL_GRID_SELECT = [
+const BUILDING_APPROVAL_GRID_COLUMNS = [
   BUILDING_APPROVAL_ID_FIELD,
   "cr137_buildingactivitynumber",
   "cr137_applicationstatus",
   "cr137_applicationdate",
   "cr137_applicantemail",
   "_cr137_portaluser_value",
-].join(",");
+];
+
+/**
+ * `createdon` carries the time of day; cr137_applicationdate is a Date Only column so it always
+ * reads back as midnight. Split out because it needs its own entry in the Web API fields site
+ * setting — clients fall back to BUILDING_APPROVAL_GRID_SELECT_BASE when it isn't allowlisted.
+ */
+export const BUILDING_APPROVAL_GRID_SELECT = [...BUILDING_APPROVAL_GRID_COLUMNS, "createdon"].join(",");
+
+/** Same list without `createdon`, for the retry path. */
+export const BUILDING_APPROVAL_GRID_SELECT_BASE = BUILDING_APPROVAL_GRID_COLUMNS.join(",");
 
 /** Full form payload for wizard retrieve. */
 export const BUILDING_APPROVAL_WEBAPI_SELECT = [
@@ -210,6 +220,8 @@ export interface BuildingApprovalRecord extends BuildingApprovalFormData {
   baNumber?: string;
   status: ApplicationStatus;
   requestDate?: string;
+  /** System `createdon` (full UTC timestamp). Only populated on the grid $select. */
+  createdOn?: string;
   /** contact record id backing cr137_portaluser (lookup target confirmed as `contact`; bind uses nav prop `cr137_PortalUser`). */
   portalUserId?: string;
 }
@@ -225,6 +237,7 @@ export interface BuildingApprovalEntity {
   cr137_buildingactivitynumber?: string;
   cr137_applicationstatus?: ApplicationStatus;
   cr137_applicationdate?: string;
+  createdon?: string;
   cr137_applicantname?: string;
   cr137_applicantpostaladdress?: string;
   cr137_applicantcontactperson?: string;

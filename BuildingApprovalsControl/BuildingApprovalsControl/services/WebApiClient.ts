@@ -3,6 +3,7 @@ import {
   BUILDING_APPROVAL_ENTITY_LOGICAL_NAME,
   BUILDING_APPROVAL_ENTITY_SET,
   BUILDING_APPROVAL_GRID_SELECT,
+  BUILDING_APPROVAL_GRID_SELECT_BASE,
   BUILDING_APPROVAL_ID_FIELD,
   BUILDING_APPROVAL_WEBAPI_SELECT,
   BuildingApprovalEntity,
@@ -35,8 +36,21 @@ export class WebApiClient implements DataverseClient {
         );
       }
       // Grid-only $select (not the full form). Avoid lookup-value $filter; scope client-side.
-      const options = `?$select=${BUILDING_APPROVAL_GRID_SELECT}&$orderby=cr137_applicationdate desc`;
-      const result = await this.webAPI.retrieveMultipleRecords(BUILDING_APPROVAL_ENTITY_SET, options);
+      const query = (select: string) => `?$select=${select}&$orderby=cr137_applicationdate desc`;
+      let result: ComponentFramework.WebApi.RetrieveMultipleResponse;
+      try {
+        result = await this.webAPI.retrieveMultipleRecords(
+          BUILDING_APPROVAL_ENTITY_SET,
+          query(BUILDING_APPROVAL_GRID_SELECT)
+        );
+      } catch {
+        // `createdon` may not be in the Webapi/…/fields site setting yet (90040101). The grid still
+        // works without it — Request Date just falls back to the date-only column.
+        result = await this.webAPI.retrieveMultipleRecords(
+          BUILDING_APPROVAL_ENTITY_SET,
+          query(BUILDING_APPROVAL_GRID_SELECT_BASE)
+        );
+      }
       const records = result.entities.map((e) => mapToRecord(e as unknown as BuildingApprovalEntity));
       const normalized = normalizeGuid(contactId).toLowerCase();
       return records.filter((r) => normalizeGuid(r.portalUserId ?? "").toLowerCase() === normalized);

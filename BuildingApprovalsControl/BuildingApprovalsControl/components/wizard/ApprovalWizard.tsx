@@ -321,10 +321,10 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
     setError(undefined);
     try {
       // Existing draft: assign BA in the same update as status. Brand-new submit: create first,
-      // then PATCH BA — suffix is derived from the new GUID.
+      // then PATCH BA.
       const existingBa = baNumber?.trim();
       if (recordId && !existingBa) {
-        const generated = generateBaNumber(recordId);
+        const generated = generateBaNumber();
         await persist(ApplicationStatus.Submitted, generated);
         setBaNumber(generated);
       } else if (recordId) {
@@ -332,7 +332,7 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
       } else {
         const newId = await persist(ApplicationStatus.Submitted);
         if (!existingBa) {
-          const generated = generateBaNumber(newId);
+          const generated = generateBaNumber();
           const portalUserId = resolvePortalContactId(contactId);
           await client.update(newId, {
             baNumber: generated,

@@ -54,6 +54,7 @@ export function mapToRecord(entity: BuildingApprovalEntity): BuildingApprovalRec
     baNumber: entity.cr137_buildingactivitynumber,
     status: entity.cr137_applicationstatus ?? ApplicationStatus.Draft,
     requestDate: toDateOnly(entity.cr137_applicationdate),
+    createdOn: entity.createdon,
     portalUserId: entity._cr137_portaluser_value,
     applicant: {
       name: entity.cr137_applicantname,

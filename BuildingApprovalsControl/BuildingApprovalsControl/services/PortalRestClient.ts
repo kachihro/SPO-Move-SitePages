@@ -2,6 +2,7 @@ import { DataverseClient } from "./DataverseClient";
 import {
   BUILDING_APPROVAL_ENTITY_SET,
   BUILDING_APPROVAL_GRID_SELECT,
+  BUILDING_APPROVAL_GRID_SELECT_BASE,
   BUILDING_APPROVAL_WEBAPI_SELECT,
   BuildingApprovalEntity,
   BuildingApprovalRecord,
@@ -32,8 +33,12 @@ export class PortalRestClient implements DataverseClient {
   constructor(private readonly siteBaseUrl: string) {}
 
   public async retrieveMultiple(contactId: string): Promise<BuildingApprovalRecord[]> {
-    const query = `?$select=${BUILDING_APPROVAL_GRID_SELECT}&$orderby=cr137_applicationdate desc`;
-    const res = await this.request("GET", `${BUILDING_APPROVAL_ENTITY_SET}${query}`);
+    const query = (select: string) => `?$select=${select}&$orderby=cr137_applicationdate desc`;
+    // `createdon` may not be allowlisted in the Webapi/…/fields site setting yet — the grid still
+    // works without it, Request Date just falls back to the date-only column.
+    const res = await this.request("GET", `${BUILDING_APPROVAL_ENTITY_SET}${query(BUILDING_APPROVAL_GRID_SELECT)}`).catch(
+      () => this.request("GET", `${BUILDING_APPROVAL_ENTITY_SET}${query(BUILDING_APPROVAL_GRID_SELECT_BASE)}`)
+    );
     const json = (await res.json()) as ODataListResponse;
     const records = (json.value ?? []).map(mapToRecord);
     const normalized = normalizeGuid(contactId).toLowerCase();

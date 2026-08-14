@@ -17,6 +17,7 @@ import {
   TableColumnDefinition,
 } from "@fluentui/react-components";
 import { useAttachmentClient } from "../../../services/AttachmentClientContext";
+import { formatDateTime } from "../../../services/dateFormat";
 import { getErrorMessage } from "../../../services/errors";
 import { formatBytes, friendlyType, sanitizeFileName } from "../../../services/fileEncoding";
 import {
@@ -274,7 +275,7 @@ export const AttachmentsGrid: React.FC<AttachmentsGridProps> = ({ recordId, read
     createTableColumn<ApplicationAttachment>({
       columnId: "createdOn",
       renderHeaderCell: () => "Uploaded",
-      renderCell: (item) => (item.createdOn ? new Date(item.createdOn).toLocaleString() : ""),
+      renderCell: (item) => formatDateTime(item.createdOn),
     }),
     createTableColumn<ApplicationAttachment>({
       columnId: "actions",

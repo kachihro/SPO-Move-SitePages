@@ -18,6 +18,7 @@ import {
   tokens,
 } from "@fluentui/react-components";
 import { useDataverseClient } from "../../services/DataverseClientContext";
+import { formatDate, formatDateTimeShort } from "../../services/dateFormat";
 import { getErrorMessage } from "../../services/errors";
 import { normalizeGuid } from "../../services/mapping";
 import { MISSING_CONTACT_ID_MESSAGE } from "../../services/portalContactId";
@@ -312,7 +313,8 @@ export const SubmissionsGrid: React.FC<SubmissionsGridProps> = ({
     createTableColumn<BuildingApprovalRecord>({
       columnId: "requestDate",
       renderHeaderCell: () => "Request Date",
-      renderCell: (item) => (item.requestDate ? new Date(item.requestDate).toLocaleDateString() : ""),
+      // createdon has the time of day; cr137_applicationdate is Date Only, so it degrades to 00:00.
+      renderCell: (item) => (item.createdOn ? formatDateTimeShort(item.createdOn) : formatDate(item.requestDate)),
     }),
     createTableColumn<BuildingApprovalRecord>({
       columnId: "status",
