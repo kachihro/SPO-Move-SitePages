@@ -386,7 +386,34 @@
 </style>
 
 <input type="hidden" id="aal-portal-contact-id" value="{% if user %}{{ user.id }}{% endif %}" />
-<input type="hidden" id="aal-portal-contact-name" value="{% if user %}{{ user.fullname | default: user.fullname }}{% endif %}" />
+{%- comment -%}
+  Name for the step 3 confirmation line. Same fallback chain as the header web template, for the
+  same two reasons: external contacts are provisioned with only an email (no first/last/fullname),
+  and `== blank` does not evaluate in this Liquid engine — test emptiness with `| default: ''`
+  then `| size`. The previous `| default: user.fullname` fell back to the same empty value, so
+  this input rendered blank and the control fell through to scraping page text for
+  "Signed in as …" — which matched Power Pages' private-site banner and named the wrong person.
+{%- endcomment -%}
+{% assign aal_contact_name = user.fullname | default: '' %}
+{% assign aal_name_len = aal_contact_name | size %}
+{% if aal_name_len == 0 %}
+  {% assign aal_first = user.firstname | default: '' %}
+  {% assign aal_last = user.lastname | default: '' %}
+  {% assign aal_first_len = aal_first | size %}
+  {% assign aal_last_len = aal_last | size %}
+  {% if aal_first_len > 0 and aal_last_len > 0 %}
+    {% assign aal_contact_name = aal_first | append: ' ' | append: aal_last %}
+  {% elsif aal_first_len > 0 %}
+    {% assign aal_contact_name = aal_first %}
+  {% elsif aal_last_len > 0 %}
+    {% assign aal_contact_name = aal_last %}
+  {% endif %}
+{% endif %}
+{% assign aal_name_len = aal_contact_name | size %}
+{% if aal_name_len == 0 %}
+  {% assign aal_contact_name = user.emailaddress1 | default: user.email | default: '' %}
+{% endif %}
+<input type="hidden" id="aal-portal-contact-name" value="{% if user %}{{ aal_contact_name }}{% endif %}" />
 <script>
   (function () {
     try {

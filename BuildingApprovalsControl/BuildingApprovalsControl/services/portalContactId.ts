@@ -251,18 +251,32 @@ function readNameFromDom(): string | undefined {
   return undefined;
 }
 
-/** Power Pages header typically shows "Signed in as Rick Astley". */
+/**
+ * Power Pages header shows "Signed in as Rick Astley".
+ *
+ * Scoped to our own header rather than scanned across document.body: Power Pages renders a
+ * private-site banner above the page reading "Signed in as <maker>", which is a *different*
+ * identity from the portal contact. A body-wide scan matched that banner first and named the
+ * wrong person in the step 3 confirmation. Never widen this back to document.body.
+ */
+const SIGNED_IN_AS_SCOPES = [".aal-header .org-chip", "header.aal-header", ".aal-header"];
+
 function readNameFromSignedInAs(): string | undefined {
   for (const doc of candidateDocuments()) {
-    let text = "";
-    try {
-      text = doc.body?.innerText ?? doc.body?.textContent ?? "";
-    } catch {
-      continue;
+    for (const selector of SIGNED_IN_AS_SCOPES) {
+      let el: Element | null = null;
+      try {
+        el = doc.querySelector(selector);
+      } catch {
+        continue;
+      }
+      if (!el) continue;
+
+      const text = (el as HTMLElement).innerText ?? el.textContent ?? "";
+      const match = /Signed in as\s+([^\n\r|]+)/i.exec(text);
+      const name = asDisplayName(match?.[1]);
+      if (name) return name;
     }
-    const match = /Signed in as\s+([^\n\r|]+)/i.exec(text);
-    const name = asDisplayName(match?.[1]);
-    if (name) return name;
   }
   return undefined;
 }

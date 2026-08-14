@@ -35,9 +35,15 @@ export class PortalRestClient implements DataverseClient {
   public async retrieveMultiple(contactId: string): Promise<BuildingApprovalRecord[]> {
     const query = (select: string) => `?$select=${select}&$orderby=cr137_applicationdate desc`;
     // `createdon` may not be allowlisted in the Webapi/…/fields site setting yet — the grid still
-    // works without it, Request Date just falls back to the date-only column.
+    // works without it, but Request Date then loses the time of day and falls back to the Date Only
+    // column.
     const res = await this.request("GET", `${BUILDING_APPROVAL_ENTITY_SET}${query(BUILDING_APPROVAL_GRID_SELECT)}`).catch(
-      () => this.request("GET", `${BUILDING_APPROVAL_ENTITY_SET}${query(BUILDING_APPROVAL_GRID_SELECT_BASE)}`)
+      (err: unknown) => {
+        console.warn(
+          `[AAL] createdon $select rejected — Request Date will show no time. Add 'createdon' to the Webapi/…/fields site setting. ${String(err)}`
+        );
+        return this.request("GET", `${BUILDING_APPROVAL_ENTITY_SET}${query(BUILDING_APPROVAL_GRID_SELECT_BASE)}`);
+      }
     );
     const json = (await res.json()) as ODataListResponse;
     const records = (json.value ?? []).map(mapToRecord);

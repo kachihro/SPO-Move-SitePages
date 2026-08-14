@@ -43,9 +43,13 @@ export class WebApiClient implements DataverseClient {
           BUILDING_APPROVAL_ENTITY_SET,
           query(BUILDING_APPROVAL_GRID_SELECT)
         );
-      } catch {
+      } catch (err: unknown) {
         // `createdon` may not be in the Webapi/…/fields site setting yet (90040101). The grid still
-        // works without it — Request Date just falls back to the date-only column.
+        // works without it — but Request Date then loses the time of day and falls back to the
+        // Date Only column, which is the usual reason the grid shows a bare date.
+        console.warn(
+          `[AAL] createdon $select rejected — Request Date will show no time. Add 'createdon' to site setting Webapi/${BUILDING_APPROVAL_ENTITY_LOGICAL_NAME}/fields. ${getErrorMessage(err)}`
+        );
         result = await this.webAPI.retrieveMultipleRecords(
           BUILDING_APPROVAL_ENTITY_SET,
           query(BUILDING_APPROVAL_GRID_SELECT_BASE)

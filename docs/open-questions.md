@@ -175,6 +175,33 @@ building further — do not guess at real values in code.
    Dataverse plugin reacting to that status change) is server-side infrastructure outside this PCF
    control's code — needs a scoping conversation (what should happen on submit — notify staff? create a
    case? call an external system?) before any of it can be built.
+5. **"Request an account" — TBC (flagged 2026-08-14).** Partners currently reach the portal one of two
+   ways, and they behave differently:
+   - **Self-service sign-up** through the `power-pages-user-flow` External ID user flow. Already
+     collects Email Address, Given Name and Surname, so the contact lands named (via
+     `LoginClaimsMapping`) with no extra work. Anyone with an email can register, though — there is no
+     approval gate.
+   - **B2B invitation.** Bypasses the user flow entirely: the guest gets a Display name and email, and
+     `firstname`/`lastname` stay **empty**, so the contact is nameless. This is what every test user so
+     far was created as, and the reason the header had to fall back to the email address.
+
+   A "Request an account" flow is the missing middle: an anonymous form, staff approval, then access.
+   Not yet designed. Decisions needed before any of it can be built:
+   - **Approval gate** — is one required at all, or is self-service sign-up plus a web role granted on
+     first login enough? If approval is required, who approves, and where (model-driven app, or a
+     staff-facing portal page)?
+   - **Mechanism** — anonymous Power Pages form → Dataverse row → staff approve → Power Pages
+     Invitation (`adx_invitation`) emailed for redemption; *or* let them self-register and gate access
+     by withholding the web role until approved. The first controls who gets in; the second controls
+     what they see once in.
+   - **What to capture** — company/lessee, ABN, role, phone, and **first and last name**. Capturing the
+     name here is the durable fix for the nameless-contact problem, since neither an invitation nor a
+     manual contact create enforces it.
+   - **Spam/abuse** — CAPTCHA on the anonymous form (it was turned off for the Approvals Basic Form;
+     an unauthenticated page needs it back on).
+   - **Duplicates** — match an incoming request against existing contacts by email before creating
+     another. `AllowContactMappingWithEmail` is `true`, so a duplicate contact and a login that links
+     to the *other* one is a real failure mode.
 
 ## Known bugs in the native implementation this rebuild is meant to fix
 - Duplicate draft record created on Save Draft.
