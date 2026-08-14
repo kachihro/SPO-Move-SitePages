@@ -376,16 +376,16 @@ export const AttachmentsGrid: React.FC<AttachmentsGridProps> = ({ recordId, read
       {loading ? (
         <Spinner label="Loading documents..." />
       ) : items.length === 0 ? (
-        <section className={styles.shell}>
-          <div className={styles.emptyState}>
-            <span>No documents attached yet.</span>
-            {canUpload && (
-              <HeroButton onClick={() => inputRef.current?.click()} disabled={busy}>
-                Add your first document
-              </HeroButton>
-            )}
-          </div>
-        </section>
+        // With the upload toolbar and drop zone on screen, an empty-state panel that only repeats
+        // "add a document" is noise — so it renders only where those affordances are absent
+        // (read-only review, or before the application has been saved).
+        !canUpload && (
+          <section className={styles.shell}>
+            <div className={styles.emptyState}>
+              <span>No documents attached yet.</span>
+            </div>
+          </section>
+        )
       ) : (
         <section className={styles.shell}>
           <DataGrid items={items} columns={columns} getRowId={(item: ApplicationAttachment) => item.id} sortable>

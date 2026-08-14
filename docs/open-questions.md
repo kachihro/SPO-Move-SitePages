@@ -97,6 +97,20 @@ building further — do not guess at real values in code.
    crashed the UI's own `catch` blocks and hid the real failure — fixed via `services/errors.ts`'s
    `getErrorMessage()`, now used in every `ApprovalWizard`/`SubmissionsGrid` catch site, independent of
    root-causing the 404 itself.
+10. **Attachments (`annotation`) on `poc-aal-pcf`** — list and upload both failed 2026-08-14 with
+    `Resource not found for the segment 'annotation'`. Not a code bug: the control correctly requests the
+    entity *set* (`/_api/annotations`), but Power Pages' Web API resolves the segment to the *logical* name
+    and only serves tables allow-listed by site settings — hence the singular name in the error.
+    **Site settings added 2026-08-14** on the `poc-aal-pcf` website: `Webapi/annotation/enabled` = `true`,
+    `Webapi/annotation/fields` (must include `documentbody` and `objectid`, or upload fails even once the
+    segment resolves), `Webapi/error/innererror` = `true`. Still to confirm on that portal: a **Table
+    Permission for Note (annotation)** with Create/Read/Write/Delete granted to the contacts' web role —
+    ideally a child permission off the building-approval permission via the
+    `cr137_buildingactivityapplication_Annotations` relationship, so a user only reaches notes on their own
+    applications. Clear the site cache after both. If upload still fails once those are in place, the next
+    suspect is the polymorphic bind `objectid_cr137_buildingactivityapplication@odata.bind`
+    (`PortalAnnotationClient.upload`) — unconfirmed whether the portal Web API accepts type-suffixed
+    polymorphic navigation binds; the fallback is creating the note through the child-relationship path.
 
 ## Still to do (next session)
 - ~~**Styling**~~ — **done**: custom Fluent brand theme (`components/theme.ts`, magenta/pink ramp
@@ -147,7 +161,16 @@ building further — do not guess at real values in code.
    mount. "Finalise" likely means end-to-end verification against the real environment (a `pac pcf push` +
    live resume test), not new code — confirm with the user before assuming further build work is needed
    here.
-3. **Workflow connected to the 'Submit' button for form data transfer.** `handleSubmit()` already persists
+3. ~~**Supporting document upload on step 3.**~~ — **built** (2026-08-14). Step 3's 100-char
+   `cr137_supportingdocuments` textarea is replaced by a real upload grid backed by Dataverse Notes
+   (`annotation`) regarding the application. Uploads go through raw `/_api/` (`PortalAnnotationClient`),
+   **not** `context.webAPI` — the polyfill strips the `objectid_...@odata.bind` the note needs and would
+   orphan it. `cr137_supportingdocuments` is left in the schema/mapping but is no longer bound to any UI
+   field. Maker-side config (Site Settings, Table Permissions, the SharePoint sync flow) and the live test
+   script are in `docs/attachments-setup.md` — **none of this works on a live portal until that is done**.
+   Also fixed in passing: `WizardStepper`'s `onSelect` went straight to `setStep`, so a new application
+   could reach step 3 with no saved record; it now persists before jumping forward.
+4. **Workflow connected to the 'Submit' button for form data transfer.** `handleSubmit()` already persists
    the record with `ApplicationStatus.Submitted`. The actual downstream workflow (Power Automate flow or
    Dataverse plugin reacting to that status change) is server-side infrastructure outside this PCF
    control's code — needs a scoping conversation (what should happen on submit — notify staff? create a
