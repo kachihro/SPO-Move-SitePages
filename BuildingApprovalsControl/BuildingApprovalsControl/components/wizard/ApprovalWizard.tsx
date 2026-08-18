@@ -1,6 +1,12 @@
 import * as React from "react";
 import {
   Checkbox,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
   Link,
   makeStyles,
   mergeClasses,
@@ -130,6 +136,9 @@ const useStyles = makeStyles({
 
 export type WizardMode = "new" | "edit" | "view";
 
+/** Which footer action is currently running — only that button shows a spinner. */
+type BusyAction = "next" | "prev" | "step" | "draft" | "submit";
+
 export interface ApprovalWizardProps {
   mode: WizardMode;
   recordId: string | null;
@@ -154,7 +163,8 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
   const [formData, setFormData] = React.useState<BuildingApprovalFormData>(emptyFormData());
   const [step, setStep] = React.useState(1);
   const [loading, setLoading] = React.useState(mode !== "new");
-  const [saving, setSaving] = React.useState(false);
+  const [busyAction, setBusyAction] = React.useState<BusyAction | undefined>(undefined);
+  const [draftSavedOpen, setDraftSavedOpen] = React.useState(false);
   const [error, setError] = React.useState<string | undefined>(undefined);
   /** Documents are uploaded straight to Dataverse — don't let the footer unmount mid-POST. */
   const [attachmentsBusy, setAttachmentsBusy] = React.useState(false);
@@ -264,19 +274,20 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
   };
 
   const handleSaveDraft = async () => {
-    setSaving(true);
+    setBusyAction("draft");
     setError(undefined);
     try {
       await persist();
-      onSaved({ draft: true });
+      // Hold the wizard open behind the confirmation — leaving happens when it is dismissed.
+      setDraftSavedOpen(true);
     } catch (err) {
       setError(getErrorMessage(err));
-      setSaving(false);
+      setBusyAction(undefined);
     }
   };
 
   const handleNext = async () => {
-    setSaving(true);
+    setBusyAction("next");
     setError(undefined);
     try {
       await persist();
@@ -284,7 +295,7 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
-      setSaving(false);
+      setBusyAction(undefined);
     }
   };
 
@@ -300,7 +311,7 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
       setStep(target);
       return;
     }
-    setSaving(true);
+    setBusyAction("step");
     setError(undefined);
     try {
       await persist();
@@ -308,7 +319,7 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
-      setSaving(false);
+      setBusyAction(undefined);
     }
   };
 
@@ -317,7 +328,7 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
       setError("Please confirm that this form has been completed to the best of your knowledge before submitting.");
       return;
     }
-    setSaving(true);
+    setBusyAction("submit");
     setError(undefined);
     try {
       // Existing draft: assign BA in the same update as status. Brand-new submit: create first,
@@ -344,7 +355,7 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
       onSaved({ draft: false });
     } catch (err) {
       setError(getErrorMessage(err));
-      setSaving(false);
+      setBusyAction(undefined);
     }
   };
 
@@ -357,7 +368,7 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
   }
 
   // Uploads write straight to Dataverse, so leaving the wizard mid-upload would drop an in-flight POST.
-  const busy = saving || attachmentsBusy;
+  const busy = busyAction !== undefined || attachmentsBusy || draftSavedOpen;
 
   const title =
     mode === "new" ? "New application" : mode === "view" ? "View application" : "Continue your application";
@@ -448,22 +459,47 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
                 </HeroButton>
               )}
               {step < STEP_LABELS.length && (
-                <HeroButton onClick={() => void handleNext()} disabled={busy}>
-                  Next
+                <HeroButton onClick={() => void handleNext()} disabled={busy} loading={busyAction === "next"}>
+                  {busyAction === "next" ? "Saving..." : "Next"}
                 </HeroButton>
               )}
               {step === STEP_LABELS.length && (
-                <HeroButton onClick={() => void handleSubmit()} disabled={busy || !confirmed}>
-                  Submit
+                <HeroButton
+                  onClick={() => void handleSubmit()}
+                  disabled={busy || !confirmed}
+                  loading={busyAction === "submit"}
+                >
+                  {busyAction === "submit" ? "Submitting..." : "Submit"}
                 </HeroButton>
               )}
-              <HeroButton onClick={() => void handleSaveDraft()} disabled={busy}>
-                Save Draft
+              <HeroButton onClick={() => void handleSaveDraft()} disabled={busy} loading={busyAction === "draft"}>
+                {busyAction === "draft" ? "Saving..." : "Save Draft"}
               </HeroButton>
             </div>
           )}
         </div>
       </div>
+
+      <Dialog open={draftSavedOpen} modalType="alert">
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>Draft Saved</DialogTitle>
+            <DialogContent>
+              Your application has been saved as a draft. You can continue it anytime from the submissions list.
+            </DialogContent>
+            <DialogActions>
+              <HeroButton
+                onClick={() => {
+                  setDraftSavedOpen(false);
+                  onSaved({ draft: true });
+                }}
+              >
+                OK
+              </HeroButton>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
     </div>
   );
 };

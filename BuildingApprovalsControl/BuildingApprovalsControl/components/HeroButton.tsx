@@ -1,5 +1,5 @@
 import * as React from "react";
-import { makeStyles, mergeClasses } from "@fluentui/react-components";
+import { makeStyles, mergeClasses, Spinner } from "@fluentui/react-components";
 import { heroButtonGradient, heroButtonGradientHover } from "./theme";
 
 const useStyles = makeStyles({
@@ -18,6 +18,7 @@ const useStyles = makeStyles({
     fontSize: "15px",
     fontFamily: "inherit",
     lineHeight: "1.2",
+    gap: "8px",
     cursor: "pointer",
     // Avoid Fluent primary solid fill winning over the gradient on Power Pages.
     backgroundColor: "transparent",
@@ -44,12 +45,23 @@ const useStyles = makeStyles({
       color: "#ffffff",
     },
   },
+  // Keep the gradient while working — a greyed-out button under a spinner reads as "dead", not "busy".
+  loading: {
+    ":disabled": {
+      opacity: 1,
+      backgroundColor: "transparent",
+      backgroundImage: heroButtonGradient,
+      cursor: "progress",
+    },
+  },
 });
 
 export interface HeroButtonProps {
   children?: React.ReactNode;
   className?: string;
   disabled?: boolean;
+  /** Show an inline spinner beside the label and block further clicks while the action runs. */
+  loading?: boolean;
   type?: "button" | "submit" | "reset";
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
 }
@@ -57,13 +69,16 @@ export interface HeroButtonProps {
 /** Pink→magenta gradient pill used for primary CTAs (Create, Next, Save Draft, Submit). */
 export const HeroButton: React.FC<HeroButtonProps> = (props) => {
   const styles = useStyles();
+  const loading = !!props.loading;
   return (
     <button
       type={props.type ?? "button"}
-      className={mergeClasses(styles.root, props.className)}
-      disabled={props.disabled}
+      className={mergeClasses(styles.root, loading && styles.loading, props.className)}
+      disabled={!!props.disabled || loading}
+      aria-busy={loading ? true : undefined}
       onClick={props.onClick}
     >
+      {loading && <Spinner size="tiny" appearance="inverted" />}
       {props.children}
     </button>
   );
