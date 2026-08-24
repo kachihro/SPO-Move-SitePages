@@ -14,15 +14,27 @@ import { useStepStyles } from "./stepStyles";
 export interface StepReviewProps extends StepProps {
   recordId: string | null;
   onAttachmentsBusyChange?: (busy: boolean) => void;
+  /** Lets the wizard block Submit while any attached document is missing its Document type. */
+  onAttachmentsValidityChange?: (state: { total: number; untyped: number }) => void;
 }
 
-export const StepReview: React.FC<StepReviewProps> = ({ readOnly, recordId, onAttachmentsBusyChange }) => {
+export const StepReview: React.FC<StepReviewProps> = ({
+  readOnly,
+  recordId,
+  onAttachmentsBusyChange,
+  onAttachmentsValidityChange,
+}) => {
   const styles = useStepStyles();
 
   return (
     <div className={styles.stack}>
       <CollapsibleSection title="Attached Documents">
-        <AttachmentsGrid recordId={recordId} readOnly={readOnly} onBusyChange={onAttachmentsBusyChange} />
+        <AttachmentsGrid
+          recordId={recordId}
+          readOnly={readOnly}
+          onBusyChange={onAttachmentsBusyChange}
+          onValidityChange={onAttachmentsValidityChange}
+        />
       </CollapsibleSection>
     </div>
   );

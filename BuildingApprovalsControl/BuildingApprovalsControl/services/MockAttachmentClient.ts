@@ -50,6 +50,13 @@ export class MockAttachmentClient implements AttachmentClient {
     };
   }
 
+  public async setDocumentType(annotationId: string, documentType: string): Promise<void> {
+    await delay(150);
+    const found = this.store.find((s) => s.meta.id === annotationId);
+    if (!found) throw new Error("That document no longer exists.");
+    found.meta = { ...found.meta, documentType };
+  }
+
   public async remove(annotationId: string): Promise<void> {
     await delay();
     const index = this.store.findIndex((s) => s.meta.id === annotationId);

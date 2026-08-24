@@ -2,13 +2,14 @@ import { AttachmentClient, AttachmentDownload } from "./AttachmentClient";
 import { base64ToBlob, fileToBase64, guessMimeType, sanitizeFileName, validateFile } from "./fileEncoding";
 import { getErrorMessage } from "./errors";
 import { normalizeGuid } from "./mapping";
-import { portalApiDelete, portalApiGet, portalApiPost } from "./portalApi";
+import { portalApiDelete, portalApiGet, portalApiPatch, portalApiPost } from "./portalApi";
 import {
   ANNOTATION_ENTITY_SET,
   ANNOTATION_LIST_SELECT,
   ANNOTATION_OBJECTID_BIND,
   AnnotationEntity,
   ApplicationAttachment,
+  documentTypeFromSubject,
 } from "../types/Attachment";
 import { BUILDING_APPROVAL_ENTITY_SET } from "../types/BuildingApproval";
 
@@ -63,6 +64,8 @@ export class PortalAnnotationClient implements AttachmentClient {
       const annotationId = await portalApiPost(
         ANNOTATION_ENTITY_SET,
         {
+          // Seeded with the file name, then overwritten by `setDocumentType` once the applicant
+          // classifies it — see `documentTypeFromSubject`.
           subject: fileName.slice(0, 500),
           filename: fileName,
           mimetype: mimeType,
@@ -86,6 +89,7 @@ export class PortalAnnotationClient implements AttachmentClient {
         mimeType,
         sizeBytes: file.size,
         createdOn: new Date().toISOString(),
+        documentType: undefined, // the applicant classifies it from the grid
       };
     });
   }
@@ -105,6 +109,14 @@ export class PortalAnnotationClient implements AttachmentClient {
     });
   }
 
+  public async setDocumentType(annotationId: string, documentType: string): Promise<void> {
+    return wrap("classify", async () => {
+      await portalApiPatch(`${ANNOTATION_ENTITY_SET}(${normalizeGuid(annotationId)})`, {
+        subject: documentType.slice(0, 500),
+      });
+    });
+  }
+
   public async remove(annotationId: string): Promise<void> {
     return wrap("delete", async () => {
       await portalApiDelete(`${ANNOTATION_ENTITY_SET}(${normalizeGuid(annotationId)})`);
@@ -120,6 +132,7 @@ function toAttachment(entity: AnnotationEntity): ApplicationAttachment {
     mimeType: entity.mimetype ?? guessMimeType(fileName),
     sizeBytes: entity.filesize ?? 0,
     createdOn: entity.createdon,
+    documentType: documentTypeFromSubject(entity.subject, fileName),
   };
 }
 

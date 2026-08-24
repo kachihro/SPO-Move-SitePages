@@ -7,11 +7,13 @@ import {
   DataGridHeader,
   DataGridHeaderCell,
   DataGridRow,
+  Dropdown,
   Link,
   makeStyles,
   MessageBar,
   MessageBarBody,
   mergeClasses,
+  Option,
   Spinner,
   TableCellLayout,
   TableColumnDefinition,
@@ -23,6 +25,7 @@ import { formatBytes, friendlyType, sanitizeFileName } from "../../../services/f
 import {
   ALLOWED_ATTACHMENT_EXTENSIONS,
   ApplicationAttachment,
+  DOCUMENT_TYPES,
   MAX_ATTACHMENT_BYTES,
 } from "../../../types/Attachment";
 import { HeroButton } from "../../HeroButton";
@@ -100,6 +103,23 @@ const useStyles = makeStyles({
     color: "#A4262C",
     cursor: "pointer",
   },
+  typeCell: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+  typeDropdown: {
+    minWidth: "150px",
+  },
+  typeMissing: {
+    // Makes the rows blocking Submit obvious at a glance rather than only in the footer message.
+    border: "1px solid #A4262C",
+    borderRadius: "4px",
+  },
+  typeUnset: {
+    color: "#A4262C",
+    fontStyle: "italic",
+  },
   confirmRow: {
     display: "inline-flex",
     alignItems: "center",
@@ -132,9 +152,19 @@ export interface AttachmentsGridProps {
   readOnly: boolean;
   /** Lets the wizard disable its footer while bytes are in flight. */
   onBusyChange?: (busy: boolean) => void;
+  /**
+   * Reports how many attached documents still have no Document Type, so the wizard can block
+   * Submit. Zero attachments is valid — the gate is per-document, not "at least one".
+   */
+  onValidityChange?: (state: { total: number; untyped: number }) => void;
 }
 
-export const AttachmentsGrid: React.FC<AttachmentsGridProps> = ({ recordId, readOnly, onBusyChange }) => {
+export const AttachmentsGrid: React.FC<AttachmentsGridProps> = ({
+  recordId,
+  readOnly,
+  onBusyChange,
+  onValidityChange,
+}) => {
   const styles = useStyles();
   const client = useAttachmentClient();
 
@@ -144,10 +174,21 @@ export const AttachmentsGrid: React.FC<AttachmentsGridProps> = ({ recordId, read
   const [uploading, setUploading] = React.useState<string[]>([]);
   const [busyId, setBusyId] = React.useState<string | null>(null);
   const [confirmId, setConfirmId] = React.useState<string | null>(null);
+  /** Only the row being classified shows a spinner — the rest of the grid stays usable. */
+  const [typeBusyId, setTypeBusyId] = React.useState<string | null>(null);
   const [dragging, setDragging] = React.useState(false);
 
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const validityRef = React.useRef(onValidityChange);
+  validityRef.current = onValidityChange;
   const limitMb = Math.round(MAX_ATTACHMENT_BYTES / (1024 * 1024));
+
+  React.useEffect(() => {
+    validityRef.current?.({
+      total: items.length,
+      untyped: items.filter((i) => !i.documentType).length,
+    });
+  }, [items]);
 
   React.useEffect(() => {
     if (!recordId) {
@@ -213,6 +254,27 @@ export const AttachmentsGrid: React.FC<AttachmentsGridProps> = ({ recordId, read
     onBusyChange?.(false);
   };
 
+  /**
+   * Optimistic: the dropdown reflects the choice immediately and reverts if the PATCH fails,
+   * because a picker that lags a round trip behind the click reads as broken.
+   */
+  const handleDocumentType = async (item: ApplicationAttachment, documentType: string) => {
+    if (documentType === item.documentType) return;
+
+    const previous = item.documentType;
+    setTypeBusyId(item.id);
+    setError(undefined);
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, documentType } : i)));
+    try {
+      await client.setDocumentType(item.id, documentType);
+    } catch (err: unknown) {
+      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, documentType: previous } : i)));
+      setError(getErrorMessage(err));
+    } finally {
+      setTypeBusyId(null);
+    }
+  };
+
   const handleDownload = async (item: ApplicationAttachment) => {
     setBusyId(item.id);
     setError(undefined);
@@ -263,8 +325,40 @@ export const AttachmentsGrid: React.FC<AttachmentsGridProps> = ({ recordId, read
       ),
     }),
     createTableColumn<ApplicationAttachment>({
+      columnId: "documentType",
+      renderHeaderCell: () => "Document type",
+      renderCell: (item) => {
+        if (readOnly) {
+          return item.documentType ?? <span className={styles.typeUnset}>Not set</span>;
+        }
+        return (
+          <span className={styles.typeCell}>
+            <Dropdown
+              className={mergeClasses(styles.typeDropdown, !item.documentType && styles.typeMissing)}
+              placeholder="Select..."
+              value={item.documentType ?? ""}
+              selectedOptions={item.documentType ? [item.documentType] : []}
+              disabled={typeBusyId === item.id || busyId === item.id}
+              onOptionSelect={(_, d) => {
+                if (d.optionValue) void handleDocumentType(item, d.optionValue);
+              }}
+            >
+              {DOCUMENT_TYPES.map((type) => (
+                <Option key={type} value={type}>
+                  {type}
+                </Option>
+              ))}
+            </Dropdown>
+            {typeBusyId === item.id && <Spinner size="tiny" />}
+          </span>
+        );
+      },
+    }),
+    createTableColumn<ApplicationAttachment>({
+      // Renamed from "Type" — it is the file format, and sitting next to "Document type" the old
+      // header read as a duplicate.
       columnId: "type",
-      renderHeaderCell: () => "Type",
+      renderHeaderCell: () => "Format",
       renderCell: (item) => friendlyType(item.fileName),
     }),
     createTableColumn<ApplicationAttachment>({
@@ -305,6 +399,7 @@ export const AttachmentsGrid: React.FC<AttachmentsGridProps> = ({ recordId, read
 
   const canUpload = !readOnly && !!recordId;
   const busy = uploading.length > 0;
+  const untyped = items.filter((i) => !i.documentType).length;
 
   return (
     <div className={styles.stack}>
@@ -319,8 +414,8 @@ export const AttachmentsGrid: React.FC<AttachmentsGridProps> = ({ recordId, read
       {canUpload && (
         <div className={styles.toolbar}>
           <p className={styles.hint}>
-            Attach site plans, drawings, certificates and any other supporting documents. Up to {limitMb} MB
-            per file ({ALLOWED_ATTACHMENT_EXTENSIONS.join(", ")}).
+            Attach site plans, drawings, certificates and any other supporting documents, then give each one
+            a Document type. Up to {limitMb} MB per file ({ALLOWED_ATTACHMENT_EXTENSIONS.join(", ")}).
           </p>
           <HeroButton onClick={() => inputRef.current?.click()} disabled={busy}>
             {busy ? "Uploading..." : "Upload documents"}
@@ -366,6 +461,16 @@ export const AttachmentsGrid: React.FC<AttachmentsGridProps> = ({ recordId, read
             <Spinner key={name} size="tiny" label={`Uploading ${name}...`} />
           ))}
         </div>
+      )}
+
+      {!readOnly && untyped > 0 && (
+        <MessageBar intent="warning">
+          <MessageBarBody>
+            {untyped === 1
+              ? "1 document still needs a Document type before you can submit."
+              : `${untyped} documents still need a Document type before you can submit.`}
+          </MessageBarBody>
+        </MessageBar>
       )}
 
       {error && (

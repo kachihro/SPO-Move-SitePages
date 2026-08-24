@@ -17,4 +17,9 @@ export interface AttachmentClient {
   upload(recordId: string, file: File): Promise<ApplicationAttachment>;
   download(annotationId: string): Promise<AttachmentDownload>;
   remove(annotationId: string): Promise<void>;
+  /**
+   * Classify an already-uploaded document. Separate from `upload` because the applicant picks the
+   * type from the grid after the bytes have landed, and may change it again before submitting.
+   */
+  setDocumentType(annotationId: string, documentType: string): Promise<void>;
 }

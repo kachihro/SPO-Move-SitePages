@@ -149,6 +149,12 @@ export interface ApprovalWizardProps {
 
 const STEP_LABELS = ["Step 1", "Step 2", "Step 3"];
 
+function untypedMessage(count: number): string {
+  return count === 1
+    ? "One attached document still needs a Document type. Set it in Attached Documents before submitting."
+    : `${count} attached documents still need a Document type. Set them in Attached Documents before submitting.`;
+}
+
 function todayDateOnly(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -168,6 +174,15 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
   const [error, setError] = React.useState<string | undefined>(undefined);
   /** Documents are uploaded straight to Dataverse — don't let the footer unmount mid-POST. */
   const [attachmentsBusy, setAttachmentsBusy] = React.useState(false);
+  /**
+   * Count of attached documents with no Document type. Zero attachments is a valid submission —
+   * the rule is that any document present must be classified, not that one must exist.
+   */
+  const [untypedDocuments, setUntypedDocuments] = React.useState(0);
+  const handleAttachmentsValidity = React.useCallback(
+    (state: { total: number; untyped: number }) => setUntypedDocuments(state.untyped),
+    []
+  );
   const [contactName, setContactName] = React.useState(() => resolvePortalContactName());
   const confirmed = !!formData.confirmed;
 
@@ -324,6 +339,10 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
   };
 
   const handleSubmit = async () => {
+    if (untypedDocuments > 0) {
+      setError(untypedMessage(untypedDocuments));
+      return;
+    }
     if (!formData.confirmed) {
       setError("Please confirm that this form has been completed to the best of your knowledge before submitting.");
       return;
@@ -429,12 +448,18 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
               readOnly={false}
               recordId={recordId}
               onAttachmentsBusyChange={setAttachmentsBusy}
+              onAttachmentsValidityChange={handleAttachmentsValidity}
             />
           )}
         </>
       )}
 
       <div className={styles.footerBlock}>
+        {!readOnly && step === STEP_LABELS.length && untypedDocuments > 0 && (
+          <MessageBar intent="warning">
+            <MessageBarBody>{untypedMessage(untypedDocuments)}</MessageBarBody>
+          </MessageBar>
+        )}
         {!readOnly && step === STEP_LABELS.length && (
           <div className={styles.confirmBlock}>
             <p className={styles.confirmLabel}>
@@ -466,7 +491,7 @@ export const ApprovalWizard: React.FC<ApprovalWizardProps> = ({ mode, recordId: 
               {step === STEP_LABELS.length && (
                 <HeroButton
                   onClick={() => void handleSubmit()}
-                  disabled={busy || !confirmed}
+                  disabled={busy || !confirmed || untypedDocuments > 0}
                   loading={busyAction === "submit"}
                 >
                   {busyAction === "submit" ? "Submitting..." : "Submit"}

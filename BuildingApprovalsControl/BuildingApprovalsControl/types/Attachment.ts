@@ -44,6 +44,27 @@ export interface ApplicationAttachment {
   mimeType: string;
   sizeBytes: number;
   createdOn?: string;
+  /** Undefined until the applicant picks one. Submit is blocked while any row is undefined. */
+  documentType?: string;
+}
+
+/**
+ * Placeholder classifications — swap for the real list when the business supplies it. Stored as
+ * free text in `annotation.subject`, so editing this list never invalidates documents already
+ * classified under an older label.
+ */
+export const DOCUMENT_TYPES = ["AAAA", "BBBB", "CCCC", "DDDD"] as const;
+
+/**
+ * `subject` does double duty: on upload it is seeded with the file name so the model-driven Notes
+ * control still has a title, then overwritten with the document type once one is chosen. A subject
+ * equal to the file name therefore means "not classified yet" — which is also what makes notes
+ * created before this feature read correctly, with no data migration.
+ */
+export function documentTypeFromSubject(subject: string | undefined, fileName: string): string | undefined {
+  const value = (subject ?? "").trim();
+  if (!value || value === fileName.trim()) return undefined;
+  return value;
 }
 
 /**
